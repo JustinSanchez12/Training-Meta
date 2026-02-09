@@ -10,7 +10,7 @@ Complete implementation for API key validation and setup flow.
 
 ```javascript
 async function validateApiKey() {
-  console.log('Checking API key validation status...');
+  console.log('[Auth] Checking API key validation status...');
 
   const apiKey = localStorage.getItem('ape-api-key');
   const lastValidated = localStorage.getItem('ape-api-key-last-validated');
@@ -19,21 +19,21 @@ async function validateApiKey() {
   if (apiKey && lastValidated) {
     const hoursSinceValidation = (Date.now() - parseInt(lastValidated)) / (1000 * 60 * 60);
     if (hoursSinceValidation < 24) {
-      console.log('API key valid, last validated', hoursSinceValidation.toFixed(1), 'hours ago');
+      console.log('[Auth] API key valid, last validated', hoursSinceValidation.toFixed(1), 'hours ago');
       return true;
     }
   }
 
   // Need validation
   if (apiKey) {
-    console.log('API key needs revalidation...');
+    console.log('[Auth] API key needs revalidation...');
     const isValid = await testApiKey(apiKey);
     if (isValid) {
       localStorage.setItem('ape-api-key-last-validated', Date.now().toString());
-      console.log('API key revalidated successfully');
+      console.log('[Auth] API key revalidated successfully');
       return true;
     } else {
-      console.log('API key validation failed, clearing...');
+      console.log('[Auth] API key validation failed, clearing...');
       localStorage.removeItem('ape-api-key');
       localStorage.removeItem('ape-api-key-last-validated');
     }
@@ -51,16 +51,16 @@ async function testApiKey(apiKey) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gemini-2.5-flash-lite',
         messages: [{ role: 'user', content: 'test' }],
         max_tokens: 5
       })
     });
 
-    console.log('API key test response status:', response.status);
+    console.log('[Auth] API key test response status:', response.status);
     return response.ok;
   } catch (error) {
-    console.error('API key test failed:', error);
+    console.error('[Auth] API key test failed:', error);
     return false;
   }
 }
@@ -70,7 +70,7 @@ async function testApiKey(apiKey) {
 
 ```javascript
 function showApiKeySetupPopup() {
-  console.log('Showing API key setup popup...');
+  console.log('[Auth] Showing API key setup popup...');
 
   // Create modal overlay
   const overlay = document.createElement('div');
@@ -83,32 +83,21 @@ function showApiKeySetupPopup() {
 
   // Create modal content
   overlay.innerHTML = `
-    <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; width: 90%;">
-      <h2 style="margin: 0 0 12px 0;">One-Time Setup Required to Enjoy Vibe Coded Prototypes</h2>
+    <div style="background: white; padding: 24px; border-radius: 12px; max-width: 500px; width: 90%;">
+      <h2 style="margin: 0 0 8px 0;">One-Time Setup Required to Enjoy Vibe Coded Prototypes</h2>
 
-      <p>As required by Meta guidelines, every user needs to go through this one-time flow,
-      which should be required only once for all prototypes created through the
-      <a href="http://fburl.com/vibe-code" target="_blank">Vibe Coding @ Meta (XFN-Friendly)</a> Workshop</p>
+      <p style="margin: 0 0 16px 0;">
+        <a href="http://fburl.com/vibe-code" target="_blank" style="color: #007bff;">Vibe Coding @ Meta (XFN-Friendly)</a>
+      </p>
 
-      <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin: 16px 0;">
-        <strong>Important Notes:</strong>
-        <ol style="margin: 8px 0; padding-left: 20px;">
-          <li>An API key is essentially a way for meta servers to know that you are the one using the prototype.</li>
-          <li>The URL provided below is an internal, Meta-only service approved for company-wide use.</li>
-        </ol>
-      </div>
+      <p style="margin: 0 0 16px 0;">
+        Get your API key here:<br>
+        <a href="https://wearables-ape.io/consent?redirect=https://wearables-ape.io/settings/api-keys" target="_blank" style="color: #007bff;">
+          wearables-ape.io/consent
+        </a>
+      </p>
 
-      <div style="margin: 16px 0;">
-        <strong>Instructions:</strong>
-        <ul style="margin: 8px 0; padding-left: 20px;">
-          <li><em>Step 0:</em> If never done before, go to <a href="https://wearables-ape.io/consent" target="_blank">wearables-ape.io/consent</a> and sign the consent form</li>
-          <li><strong>Step 1:</strong> Go to <a href="https://wearables-ape.io/settings/api-keys" target="_blank">wearables-ape.io/settings/api-keys</a></li>
-          <li><strong>Step 2:</strong> Press "New API Key" button and copy the API key</li>
-          <li><strong>Step 3:</strong> Paste your API key below and click "Save"</li>
-        </ul>
-      </div>
-
-      <div style="display: flex; gap: 12px; margin-top: 16px;">
+      <div style="display: flex; gap: 12px;">
         <input type="text" id="api-key-input" placeholder="Paste your API key here"
                style="flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;">
         <button id="api-key-save-btn"
@@ -137,7 +126,7 @@ function showApiKeySetupPopup() {
 
     saveBtn.disabled = true;
     saveBtn.textContent = 'Validating...';
-    console.log('Validating entered API key...');
+    console.log('[Auth] Validating entered API key...');
 
     const isValid = await testApiKey(apiKey);
 
@@ -145,7 +134,7 @@ function showApiKeySetupPopup() {
       localStorage.setItem('ape-api-key', apiKey);
       localStorage.setItem('ape-api-key-last-validated', Date.now().toString());
       showMessage('Success! Your API key has been saved.', 'success');
-      console.log('API key saved successfully, reloading...');
+      console.log('[Auth] API key saved successfully, reloading...');
       setTimeout(() => location.reload(), 1500);
     } else {
       showMessage('Invalid API Key. Please check your key and try again.', 'error');
@@ -167,7 +156,7 @@ function showApiKeySetupPopup() {
 
 ```javascript
 async function initApp() {
-  console.log('Initializing application...');
+  console.log('[App] Initializing application...');
 
   const isValid = await validateApiKey();
 
@@ -176,7 +165,7 @@ async function initApp() {
     return; // Stop initialization until valid key
   }
 
-  console.log('API key valid, proceeding with app initialization...');
+  console.log('[App] API key valid, proceeding with app initialization...');
   // Continue with app setup
 }
 
