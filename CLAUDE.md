@@ -36,35 +36,55 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 
 **Validation Endpoint:**
 - **POST** `https://api.wearables-ape.io/models/v1/chat/completions`
-- **Payload:** `{"model": "gpt-4o", "messages": [{"role": "user", "content": "test"}], "max_tokens": 5}`
+- **Payload:** `{"model": "gemini-2.5-flash-lite", "messages": [{"role": "user", "content": "test"}], "max_tokens": 5}`
 - Validate once per 24 hours; on failure, clear keys and show setup popup
 
 ### 2. Rate Limiting
 
 **All endpoints are rate limited to 1 call per second per model.**
-- Rate limit applies from call initiation (no need to wait for response)
-- Each model has independent rate limits: `gpt-4o`, `gpt-4o-mini`, `gemini-2.5-pro`, `gemini-3-pro-preview`
 
-### 3. LLM APIs
+> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit. Always wait 1+ second between calls to the same model.
 
-**Chat Completions (GPT-4o / GPT-4o-mini):**
-- **Endpoint:** `POST https://api.wearables-ape.io/models/v1/chat/completions`
-- `max_tokens` must be ≥2000
+### 3. Available Models
 
-**Gemini Async Reasoning:**
+| Model ID | Type | Best For |
+|----------|------|----------|
+| `claude-haiku-4.5` | Claude | Fast, lightweight tasks |
+| `claude-opus-4.1` | Claude | Highest quality output |
+| `claude-sonnet-4.5` | Claude | Balanced performance |
+| `gemini-2.5-flash` | Gemini | Fast general tasks |
+| `gemini-2.5-flash-image` | Gemini | Image-optimized tasks |
+| `gemini-2.5-flash-lite` | Gemini | Fastest, cheapest option |
+| `gemini-2.5-pro` | Gemini | Complex reasoning (exposes `reasoning_content`) |
+| `gpt-5.1` | GPT | General purpose |
+| `gpt-5.2` | GPT | Advanced capabilities |
+| `gpt-5.2-chat` | GPT | Chat-optimized |
+
+**All models support:** Text, Vision (images), Documents, System prompts, Multi-turn conversations
+
+### 4. LLM APIs
+
+**Async Endpoint (PRIMARY):**
 - **Step 1:** `POST https://api.wearables-ape.io/conversations?sync=false`
-- **Step 2:** `GET https://api.wearables-ape.io/conversations/{cid}/{taskId}` (poll every 500ms)
+- **Step 2:** `GET https://api.wearables-ape.io/conversations/{cid}/{taskId}` (poll every 500ms until `state === "COMPLETE"`)
 
-**Vision:** Use `image_url` with `detail: "high"`
+**Sync Endpoint (BACKUP):**
+- **Endpoint:** `POST https://api.wearables-ape.io/models/v1/chat/completions`
+- Use when async endpoint has issues
 
-### 4. Other APIs
+**Vision:** Use `image_url` with `detail: "high"` (works with all models)
+
+**gemini-2.5-pro:** Returns `reasoning_content` field with chain-of-thought
+
+### 5. Other APIs
 
 - **Whisper:** `POST https://api.wearables-ape.io/models/v1/audio/transcriptions`
 - **Image Gen:** `POST https://api.wearables-ape.io/conversations?sync=true` (nano-banana-pro)
 - **JSON Storage:** `https://api.wearables-ape.io/structured-memories/{key}`
 - **File Storage:** `https://api.wearables-ape.io/files/` (30-day expiration)
+- **Image-to-3D:** `POST https://api.wearables-ape.io/models/custom/invoke` (SAM3 + SAM3D)
 
-### 5. Development Standards
+### 6. Development Standards
 
 - **Stack:** HTML, CSS, JavaScript
 - **Analytics:** Google Analytics tag `G-Q98010P7LZ`
@@ -72,7 +92,7 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 - **Media:** Use `https://picsum.photos/` for placeholders
 - **README:** Include "Original Prompt" section and `"Protohub fullscreen deployment: true"`
 
-### 6. Execution Methodology
+### 7. Execution Methodology
 
 Use `tasks.md` for all development tracking. Follow Update-Execute-Complete loop.
 

@@ -11,7 +11,7 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 
 ### Validation Endpoint
 - **POST** `https://api.wearables-ape.io/models/v1/chat/completions`
-- **Payload:** `{"model": "gpt-4o", "messages": [{"role": "user", "content": "test"}], "max_tokens": 5}`
+- **Payload:** `{"model": "gemini-2.5-flash-lite", "messages": [{"role": "user", "content": "test"}], "max_tokens": 5}`
 - **Validate once per 24 hours**; on failure, clear keys and show setup popup
 
 > **Skill:** Use `ape-auth` skill for full popup implementation details.
@@ -23,19 +23,86 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 **All endpoints are rate limited to 1 call per second per model.**
 
 - Rate limit applies from call initiation (no need to wait for response)
-- Each model has independent rate limits:
-  - `gpt-4o` - 1/sec
-  - `gpt-4o-mini` - 1/sec
-  - `gemini-2.5-pro` - 1/sec
-  - `gemini-3-pro-preview` - 1/sec
+- Each model has independent rate limits (see Available Models below)
 
 **Implementation:** Use a global queue per model to manage 1-second intervals.
+
+> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit. Always wait 1+ second between calls to the same model.
 
 ---
 
 ## 3. LLM APIs
 
-### 3.1 Chat Completions (GPT-4o / GPT-4o-mini)
+### 3.1 Available Models
+
+| Model ID | Type | Best For |
+|----------|------|----------|
+| `claude-haiku-4.5` | Claude | Fast, lightweight tasks |
+| `claude-opus-4.1` | Claude | Highest quality output |
+| `claude-sonnet-4.5` | Claude | Balanced performance |
+| `gemini-2.5-flash` | Gemini | Fast general tasks |
+| `gemini-2.5-flash-image` | Gemini | Image-optimized tasks |
+| `gemini-2.5-flash-lite` | Gemini | Fastest, cheapest option |
+| `gemini-2.5-pro` | Gemini | Complex reasoning (exposes chain-of-thought) |
+| `gpt-5.1` | GPT | General purpose |
+| `gpt-5.2` | GPT | Advanced capabilities |
+| `gpt-5.2-chat` | GPT | Chat-optimized |
+
+**All models support:** Text, Vision (images), Documents, System prompts, Multi-turn conversations
+
+---
+
+### 3.2 Async Endpoint (PRIMARY)
+
+**Use this endpoint for all LLM calls.** Two-step process: submit request, then poll for completion.
+
+#### Step 1: Submit Request
+
+**Endpoint:** `POST https://api.wearables-ape.io/conversations?sync=false`
+
+**Headers:**
+```
+Authorization: Bearer {ape-api-key}
+Content-Type: application/json
+```
+
+**Payload:**
+```json
+{
+  "name": "llm-text-gen-raw",
+  "raw_model_request": {
+    "model": "gemini-2.5-flash",
+    "messages": [
+      {"role": "system", "content": "..."},
+      {"role": "user", "content": "..."}
+    ],
+    "stream": false
+  }
+}
+```
+
+**Response:** Contains `cid` (conversation ID) and `tasks[0].id` (task ID)
+
+#### Step 2: Poll for Completion
+
+**Endpoint:** `GET https://api.wearables-ape.io/conversations/{cid}/{taskId}`
+
+- Poll every 500ms until `state === "COMPLETE"`
+- URL-encode `cid` (`:` becomes `%3A`)
+- Response at: `output.choices[0].message.content`
+
+**Response States:**
+- `PENDING` - Still processing
+- `COMPLETE` - Result ready
+- `FAILED` - Request failed
+
+> **Skill:** Use `ape-llm` skill for complete implementation with polling and error handling.
+
+---
+
+### 3.3 Sync Endpoint (BACKUP)
+
+**Use only when async endpoint has issues.** Simpler but less reliable for long-running requests.
 
 **Endpoint:** `POST https://api.wearables-ape.io/models/v1/chat/completions`
 
@@ -48,7 +115,7 @@ Content-Type: application/json
 **Payload:**
 ```json
 {
-  "model": "gpt-4o",
+  "model": "gemini-2.5-flash",
   "messages": [
     {"role": "system", "content": "..."},
     {"role": "user", "content": "..."}
@@ -59,82 +126,58 @@ Content-Type: application/json
 
 **Response:** `choices[0].message.content` contains the assistant's reply.
 
-**Key Parameters:**
-- `model`: `gpt-4o` or `gpt-4o-mini`
-- `max_tokens`: Must be ≥2000
+**When to use sync endpoint:**
+- Async endpoint returns errors
+- Simple, fast queries where polling overhead isn't worth it
+- Debugging async issues
 
 ---
 
-### 3.2 Gemini Async Reasoning
+### 3.4 Special Model Features
 
-Gemini models use a two-step async process.
+#### gemini-2.5-pro Reasoning Content
 
-**Available Models:**
-| Model | Reliability |
-|-------|-------------|
-| `gemini-2.5-pro` | High - Recommended |
-| `gemini-3-pro-preview` | Medium - May have capacity issues |
+`gemini-2.5-pro` returns chain-of-thought reasoning in a separate field:
 
-**When to Use:** Complex reasoning, math, multi-step problems, chain-of-thought.
-
-**Step 1: Submit Request**
-
-**Endpoint:** `POST https://api.wearables-ape.io/conversations?sync=false`
-
-**Payload:**
 ```json
 {
-  "name": "llm-text-gen-raw",
-  "raw_model_request": {
-    "model": "gemini-2.5-pro",
-    "messages": [...],
-    "stream": false
-  }
+  "choices": [{
+    "message": {
+      "content": "The answer is 42.",
+      "reasoning_content": "Let me think through this step by step..."
+    }
+  }]
 }
 ```
 
-**Response:** Contains `cid` (conversation ID) and `tasks[0].id` (task ID)
-
-**Step 2: Poll for Completion**
-
-**Endpoint:** `GET https://api.wearables-ape.io/conversations/{cid}/{taskId}`
-
-- Poll every 500ms until `state === "COMPLETE"`
-- URL-encode `cid` (`:` becomes `%3A`)
-- Response at: `output.choices[0].message.content`
-
-**Content Format:** Can be string or array with `{type: "reasoning"}` and `{type: "text"}` parts.
-
-> **Skill:** Use `ape-llm-gemini` skill for complete polling code and fallback logic.
+Access reasoning via `output.choices[0].message.reasoning_content`
 
 ---
 
-### 3.3 Vision (Image Analysis)
+### 3.5 Vision (Image Analysis)
 
-**Endpoint:** `POST https://api.wearables-ape.io/models/v1/chat/completions`
+Works with **all models** via both async and sync endpoints.
 
-**Payload:**
+**Message format with image:**
 ```json
 {
-  "model": "gpt-4o",
-  "messages": [{
-    "role": "user",
-    "content": [
-      {"type": "text", "text": "Describe this image"},
-      {"type": "image_url", "image_url": {"url": "...", "detail": "high"}}
-    ]
-  }],
-  "max_tokens": 2000
+  "role": "user",
+  "content": [
+    {"type": "text", "text": "Describe this image"},
+    {"type": "image_url", "image_url": {"url": "...", "detail": "high"}}
+  ]
 }
 ```
 
-**Image URL:** Can be public URL or Base64 data URI (`data:image/png;base64,...`)
+**Image URL formats:**
+- Public URL: `https://example.com/image.jpg`
+- Base64 data URI: `data:image/png;base64,...`
 
-**Key:** `detail` must be `"high"`
+**Key:** `detail` must be `"high"` for best results.
 
 ---
 
-### 3.4 Document/File Content
+### 3.6 Document/File Content
 
 **No native file attachments.** Inject file content directly into messages.
 
