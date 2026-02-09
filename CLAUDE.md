@@ -15,26 +15,33 @@ When the user creates, updates, or deletes rules, skills, or agents, you must en
 
 ```
 /
-├── CLAUDE.md                     # Claude Code: project context
+├── CLAUDE.md                     # Claude Code: project context + synced rules
 ├── .claude/
 │   ├── commands/                 # Claude Code: slash commands
 │   │   └── *.md
+│   ├── skills/                   # Claude Code: skills (PRIMARY - Cursor reads this too)
+│   │   └── <skill-name>/
+│   │       └── SKILL.md
 │   └── agents/                   # Claude Code: sub-agents
 │       └── *.md
 ├── .llms/
 │   ├── rules/                    # Devmate: rules (YAML frontmatter required)
 │   │   └── *.md
-│   ├── skills/                   # Devmate: skills
+│   ├── skills/                   # Devmate: skills (synced FROM .claude/skills/)
 │   │   └── <skill-name>/
 │   │       └── SKILL.md
 │   ├── agents/                   # Devmate: sub-agents
 │   │   └── *.md
 │   └── commands/                 # Devmate: slash commands
 │       └── *.md
-└── .cursor/
-    └── rules/                    # Cursor: rules
-        └── *.md
+├── .cursor/
+│   └── rules/                    # Cursor: rules
+│       └── *.md
+└── AGENTS.md                     # Cursor: optional agent instructions (simple format)
 ```
+
+> **Note:** `.cursorrules` is deprecated. Use `.cursor/rules/` instead.
+> **Note:** Cursor auto-discovers skills from `.claude/skills/` — no separate sync needed.
 
 ---
 
@@ -88,13 +95,13 @@ Skills provide on-demand domain knowledge that the AI loads when relevant.
 
 | Source of Truth | Claude Code | Devmate VS Code | Cursor |
 |-----------------|-------------|-----------------|--------|
-| `.llms/skills/<name>/SKILL.md` | Copy to `.claude/skills/<name>/SKILL.md` | Native ✓ | ❌ Not supported |
+| `.claude/skills/<name>/SKILL.md` | Native ✓ (PRIMARY) | Copy to `.llms/skills/<name>/SKILL.md` | ✅ Auto-discovers from `.claude/skills/` |
 
 **When creating or updating a skill:**
 
-1. **Create/update the Devmate version first** (source of truth):
+1. **Create/update the Claude Code version first** (source of truth):
    ```
-   .llms/skills/<skill-name>/SKILL.md
+   .claude/skills/<skill-name>/SKILL.md
    ```
    Format:
    ```markdown
@@ -106,14 +113,14 @@ Skills provide on-demand domain knowledge that the AI loads when relevant.
    <skill content>
    ```
 
-2. **Sync to Claude Code** — Copy entire file to:
+2. **Sync to Devmate** — Copy entire file to:
    ```
-   .claude/skills/<skill-name>/SKILL.md
+   .llms/skills/<skill-name>/SKILL.md
    ```
-   > ✅ Claude Code uses the same SKILL.md format.
+   > ✅ Devmate uses the same SKILL.md format.
 
-3. **Cursor** — Skills are not supported. No action needed.
-   > ℹ️ If critical skill content must be available in Cursor, consider adding key points to a Cursor rule file instead.
+3. **Cursor** — No action needed. Cursor auto-discovers skills from `.claude/skills/`.
+   > ✅ Cursor reads from `.claude/skills/` directly (same as Claude Code).
 
 ---
 
@@ -123,7 +130,7 @@ Agents are specialized AI personas with focused prompts and scopes.
 
 | Source of Truth | Claude Code | Devmate VS Code | Cursor |
 |-----------------|-------------|-----------------|--------|
-| `.llms/agents/<name>.md` | Copy to `.claude/agents/<name>.md` | Native ✓ | ❌ Not supported |
+| `.llms/agents/<name>.md` | Copy to `.claude/agents/<name>.md` | Native ✓ | Use `AGENTS.md` (different format) |
 
 **When creating or updating an agent:**
 
@@ -156,7 +163,13 @@ Agents are specialized AI personas with focused prompts and scopes.
    <agent prompt>
    ```
 
-3. **Cursor** — Agents are not supported. No action needed.
+3. **Cursor** — Optionally create/update `AGENTS.md` in project root:
+   ```markdown
+   # Agent Instructions
+
+   <simplified agent instructions for Cursor>
+   ```
+   > ℹ️ Cursor's `AGENTS.md` is a simpler format — plain markdown without frontmatter.
 
 ---
 
@@ -225,27 +238,30 @@ For each capability type, understand what each tool supports:
 | Capability | Devmate (.llms/) | Claude Code (.claude/) | Cursor (.cursor/) |
 |------------|------------------|------------------------|-------------------|
 | Rules | ✅ Native | ✅ CLAUDE.md section | ✅ .cursor/rules/ |
-| Skills | ✅ Native | ✅ .claude/skills/ | ❌ Not supported |
-| Agents | ✅ Native | ✅ .claude/agents/ | ❌ Not supported |
+| Skills | ✅ Synced from .claude/ | ✅ Native (PRIMARY) | ✅ Auto-discovers .claude/skills/ |
+| Agents | ✅ Native | ✅ .claude/agents/ | ⚠️ AGENTS.md (different format) |
 | Commands | ✅ Native | ✅ .claude/commands/ | ❌ Not supported |
 
 ### Step 3: Execute Propagation Checklist
 
 ```
-□ 1. Create/update in .llms/ (source of truth) with proper YAML frontmatter
+□ 1. Create/update in appropriate source of truth location
 □ 2. For RULES:
-    □ a. Strip YAML frontmatter
-    □ b. Add/update section in CLAUDE.md between sync markers
+    □ a. Create in .llms/rules/ with proper YAML frontmatter
+    □ b. Strip YAML frontmatter and add/update section in CLAUDE.md
     □ c. Copy to .cursor/rules/<name>.md (without frontmatter)
 □ 3. For SKILLS:
-    □ a. Copy entire file to .claude/skills/<name>/SKILL.md
-    □ b. (Cursor: not supported - consider adding key points to a rule if critical)
+    □ a. Create in .claude/skills/<name>/SKILL.md (PRIMARY)
+    □ b. Copy to .llms/skills/<name>/SKILL.md for Devmate
+    □ c. (Cursor: auto-discovers from .claude/skills/ — no action needed)
 □ 4. For AGENTS:
-    □ a. Copy to .claude/agents/<name>.md
-    □ b. (Cursor: not supported)
+    □ a. Create in .llms/agents/ (source of truth)
+    □ b. Copy to .claude/agents/<name>.md
+    □ c. (Cursor: optionally update AGENTS.md with simplified instructions)
 □ 5. For COMMANDS:
-    □ a. Copy to .claude/commands/<name>.md
-    □ b. (Cursor: not supported)
+    □ a. Create in .llms/commands/ (source of truth)
+    □ b. Copy to .claude/commands/<name>.md
+    □ c. (Cursor: not supported)
 □ 6. Verify all files are consistent
 □ 7. Commit changes to git (see Git Commit Requirements)
 ```
@@ -409,10 +425,11 @@ Run this validation when requested or after major changes:
 □ All .llms/rules/<name>.md files have valid YAML frontmatter with 'oncalls'
 □ CLAUDE.md contains sections for each rule in .llms/rules/
 □ .cursor/rules/ contains a file for each rule in .llms/rules/
-□ All .llms/skills/<name>/SKILL.md files are mirrored in .claude/skills/
+□ All .claude/skills/<name>/SKILL.md files are mirrored in .llms/skills/
 □ All .llms/agents/<name>.md files are mirrored in .claude/agents/
 □ All .llms/commands/<name>.md files are mirrored in .claude/commands/
 □ No YAML frontmatter appears in CLAUDE.md or .cursor/rules/ files
+□ No .cursorrules file exists (deprecated)
 ```
 
 ---
@@ -424,10 +441,12 @@ When the user says:
 | User Request | Action |
 |--------------|--------|
 | "Add a rule for X" | Create in `.llms/rules/`, sync to `CLAUDE.md` and `.cursor/rules/` |
-| "Add a skill for X" | Create in `.llms/skills/X/SKILL.md`, sync to `.claude/skills/` |
+| "Add a skill for X" | Create in `.claude/skills/X/SKILL.md`, sync to `.llms/skills/` |
 | "Add an agent for X" | Create in `.llms/agents/`, sync to `.claude/agents/` |
 | "Update rule X" | Update in `.llms/rules/`, sync changes to other locations |
-| "Delete rule X" | Remove from all three locations |
+| "Update skill X" | Update in `.claude/skills/`, sync to `.llms/skills/` |
+| "Delete rule X" | Remove from `.llms/rules/`, `CLAUDE.md`, and `.cursor/rules/` |
+| "Delete skill X" | Remove from `.claude/skills/` and `.llms/skills/` |
 | "Sync all configs" | Validate and synchronize all files across all tools |
 | "Validate configs" | Run validation checklist and report discrepancies |
 
@@ -435,11 +454,17 @@ When the user says:
 
 ## Important Notes
 
-1. **Source of Truth**: `.llms/` is always the source of truth. Never edit `.claude/` or `.cursor/` files directly for synced content.
+1. **Source of Truth**:
+   - **Rules**: `.llms/rules/` is the source of truth
+   - **Skills**: `.claude/skills/` is the source of truth (Claude Code is primary)
+   - **Agents/Commands**: `.llms/` is the source of truth
 
-2. **YAML Frontmatter**: Only Devmate requires YAML frontmatter. Always strip it when syncing to Claude Code or Cursor.
+2. **YAML Frontmatter**: Only Devmate requires YAML frontmatter for rules. Always strip it when syncing to Claude Code or Cursor.
 
-3. **Cursor Limitations**: Cursor only supports rules. Skills, agents, and commands cannot be synced to Cursor.
+3. **Cursor Compatibility**:
+   - `.cursorrules` is **deprecated** — use `.cursor/rules/` instead
+   - Cursor auto-discovers skills from `.claude/skills/` (no manual sync needed)
+   - For agents, use `AGENTS.md` (simpler format than `.llms/agents/`)
 
 4. **Claude Code CLAUDE.md**: This file serves dual purpose — project context AND synced rules. Keep synced rules in a clearly marked section.
 
