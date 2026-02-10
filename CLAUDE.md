@@ -16,7 +16,7 @@ APE (API Platform for Experiments) provides a unified API for LLMs, image genera
 
 | Task | Command |
 |------|---------|
-| Run locally | Open `index.html` in Chrome |
+| Run locally | `npx serve` or `python -m http.server` |
 | Debug | Open Chrome DevTools (F12) |
 
 ---
@@ -87,6 +87,7 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 ### 6. Development Standards
 
 - **Stack:** HTML, CSS, JavaScript
+- **Testing:** Always serve apps on a local server (never open HTML files directly)
 - **Analytics:** Google Analytics tag `G-Q98010P7LZ`
 - **Debuggability:** Extensive `console.log()` statements
 - **Media:** Use `https://picsum.photos/` for placeholders

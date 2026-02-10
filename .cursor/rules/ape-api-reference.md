@@ -380,6 +380,11 @@ Convert image + mask to 3D GLB. Processing time: **30-40 seconds**.
 - **Environment:** Chrome on MacOS
 - **Network:** Any accessible API allowed
 
+### Testing Apps
+- **Always serve apps on a local server** — Never suggest opening HTML files directly in the browser
+- Use `npx serve`, `python -m http.server`, or similar to start a local server
+- This ensures proper handling of ES modules, fetch requests, and CORS policies
+
 ### Media Handling
 - **Priority:** Use provided media URLs exactly
 - **Fallback:** Use `https://picsum.photos/{size}` or `https://picsum.photos/{width}/{height}`
