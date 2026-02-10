@@ -1,12 +1,12 @@
 # Vibecoding at Meta Release Notes
 
-## February 2025
+## February 2026
 
 ---
 
 ## Prompt Wizard v1.5
 
-The Prompt Wizard is now hosted on Menace with powerful new capabilities:
+The Prompt Wizard is now hosted on Matt with powerful new capabilities:
 
 - **Personal Prompt History** — Your prompts are automatically saved to a personal database, so you never lose your work
 - **Resume Anytime** — Pick up exactly where you left off across sessions
@@ -16,7 +16,7 @@ The Prompt Wizard is now hosted on Menace with powerful new capabilities:
 
 ## Vibe Coding Capabilities
 
-### Smarter Architecture for Better Performance
+### Agentic Architecture for Deterministic and Context-Friendly Coding
 
 We've reorganized how AI agents receive context to make your vibe coding experience faster and more accurate.
 
@@ -35,7 +35,7 @@ Additionally, the rules now work automatically with multiple AI coding tools:
 
 Just drop the rules folder into any project — no configuration needed.
 
-### Expanded Model Library
+### Expanded Model Library Powered by APE
 
 We've refreshed the entire model lineup with 10 new models across three providers. All models support text, images, documents, and multi-turn conversations.
 
