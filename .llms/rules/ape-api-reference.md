@@ -331,6 +331,75 @@ URL.revokeObjectURL(blobUrl);
 img.src = `https://api.wearables-ape.io/files/${fileId}?file_type=web_generated`;
 ```
 
+### Retry Mechanism for Generation Failures
+
+Image generation may fail due to backend capacity issues. Implement retry with exponential backoff (up to 5 retries, 1-5 second delays).
+
+```javascript
+async function generateImageWithRetry(prompt, maxRetries = 5) {
+  const delays = [1000, 2000, 3000, 4000, 5000]; // 1s to 5s
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[ImageGen] Attempt ${attempt + 1}/${maxRetries + 1}`);
+
+      const response = await fetch(
+        'https://api.wearables-ape.io/conversations?sync=true',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('ape-api-key')}`
+          },
+          body: JSON.stringify({
+            model_api_name: 'nano-banana-pro',
+            name: 'llm-image-gen',
+            output_type: 'file_id',
+            user: prompt
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const fileId = data.result?.file_id?.[0];
+
+      if (!fileId) {
+        throw new Error('No file_id in response');
+      }
+
+      console.log('[ImageGen] Success, file_id:', fileId);
+      return fileId;
+
+    } catch (error) {
+      console.warn(`[ImageGen] Attempt ${attempt + 1} failed:`, error.message);
+
+      if (attempt < maxRetries) {
+        const delay = delays[attempt];
+        console.log(`[ImageGen] Retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        console.error('[ImageGen] All retries exhausted');
+        throw new Error(`Image generation failed after ${maxRetries + 1} attempts: ${error.message}`);
+      }
+    }
+  }
+}
+
+// Usage
+try {
+  const fileId = await generateImageWithRetry('A sunset over mountains');
+  const blobUrl = await getImageBlobUrl(fileId);
+  document.getElementById('myImage').src = blobUrl;
+} catch (error) {
+  console.error('Failed to generate image:', error);
+  // Show fallback or error message to user
+}
+```
+
 ---
 
 ## 6. Structured Memories (JSON Storage)

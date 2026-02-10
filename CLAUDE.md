@@ -83,7 +83,7 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 ### 5. Other APIs
 
 - **Whisper:** `POST https://api.wearables-ape.io/models/v1/audio/transcriptions`
-- **Image Gen:** `POST https://api.wearables-ape.io/conversations?sync=true` (nano-banana-pro) — **must convert to blob URL for display**
+- **Image Gen:** `POST https://api.wearables-ape.io/conversations?sync=true` (nano-banana-pro) — **must convert to blob URL for display, use retry with backoff**
 - **JSON Storage:** `https://api.wearables-ape.io/structured-memories/{key}`
 - **File Storage:** `https://api.wearables-ape.io/files/` (30-day expiration)
 - **Image-to-3D:** `POST https://api.wearables-ape.io/models/custom/invoke` (SAM3 + SAM3D)
