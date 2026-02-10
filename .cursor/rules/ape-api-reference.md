@@ -23,11 +23,62 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 **All endpoints are rate limited to 1 call per second per model.**
 
 - Rate limit applies from call initiation (no need to wait for response)
-- Each model has independent rate limits (see Available Models below)
+- Each model has independent rate limits — you CAN send requests to different models simultaneously
+- Wait 1 second between **sends**, not between responses
 
-**Implementation:** Use a global queue per model to manage 1-second intervals.
+> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit.
 
-> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit. Always wait 1+ second between calls to the same model.
+### Optimal Rate Limiting Pattern
+
+Use a global queue per model. Fire requests without waiting for previous responses — just ensure 1 second between sends to the same model.
+
+```javascript
+class RateLimitedQueue {
+  constructor() {
+    this.lastCallTime = {}; // Per-model timestamps
+    this.minInterval = 1000; // 1 second
+  }
+
+  async throttle(model) {
+    const now = Date.now();
+    const lastCall = this.lastCallTime[model] || 0;
+    const elapsed = now - lastCall;
+
+    if (elapsed < this.minInterval) {
+      await new Promise(r => setTimeout(r, this.minInterval - elapsed));
+    }
+
+    // Record send time BEFORE the call, not after response
+    this.lastCallTime[model] = Date.now();
+  }
+
+  async call(model, requestFn) {
+    await this.throttle(model);
+    // Fire and don't wait - or await if you need the result
+    return requestFn();
+  }
+}
+
+const queue = new RateLimitedQueue();
+
+// Parallel calls to DIFFERENT models (allowed)
+const [result1, result2] = await Promise.all([
+  queue.call('gemini-2.5-flash', () => fetchLLM('gemini-2.5-flash', prompt1)),
+  queue.call('claude-sonnet-4.5', () => fetchLLM('claude-sonnet-4.5', prompt2))
+]);
+
+// Sequential calls to SAME model (1 second apart, but don't wait for response)
+queue.call('gemini-2.5-flash', () => fetchLLM('gemini-2.5-flash', prompt1));
+queue.call('gemini-2.5-flash', () => fetchLLM('gemini-2.5-flash', prompt2)); // Waits 1s before sending
+```
+
+**Anti-pattern (slow):**
+```javascript
+// WRONG - unnecessarily waits for each response
+const result1 = await fetchLLM('gemini-2.5-flash', prompt1);
+await sleep(1000);
+const result2 = await fetchLLM('gemini-2.5-flash', prompt2);
+```
 
 ---
 

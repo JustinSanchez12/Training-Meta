@@ -43,7 +43,11 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 
 **All endpoints are rate limited to 1 call per second per model.**
 
-> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit. Always wait 1+ second between calls to the same model.
+- Wait 1 second between **sends**, not between responses — no need to wait for previous response
+- Each model has independent rate limits — send to different models simultaneously
+- Use a global queue per model to manage intervals
+
+> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit.
 
 ### 3. Available Models
 
