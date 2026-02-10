@@ -1,48 +1,24 @@
-# APE Platform Release Notes
+# Vibecoding at Meta Release Notes
 
-## February 2025 Release
-
-### Multi-Tool Support — Now Works Everywhere
-
-**Previously:** APE rules only worked with DevMate VS Code.
-
-**Now:** Drop the `ape-rules` folder into any project and it works automatically with:
-- **Claude Code** (CLI)
-- **Cursor** (IDE)
-- **DevMate VS Code** (IDE)
-
-No configuration needed. Each tool automatically discovers and loads the appropriate rules and skills.
+## February 2025
 
 ---
 
-### Expanded Model Library
+## Prompt Wizard v1.5
 
-We've refreshed the entire model lineup with 10 new models across three providers:
+The Prompt Wizard is now hosted on Menace with powerful new capabilities:
 
-| Provider | Models | Best For |
-|----------|--------|----------|
-| **Claude** | Haiku 4.5, Sonnet 4.5, Opus 4.1 | Quality writing, complex reasoning |
-| **Gemini** | 2.5 Flash, Flash-Lite, Flash-Image, Pro | Fast tasks, image analysis, deep reasoning |
-| **GPT** | 5.1, 5.2, 5.2-Chat | General purpose, conversations |
-
-All models now support text, images, documents, and multi-turn conversations.
+- **Personal Prompt History** — Your prompts are automatically saved to a personal database, so you never lose your work
+- **Resume Anytime** — Pick up exactly where you left off across sessions
+- **Faster Access** — No local setup required, just open and start creating
 
 ---
 
-### New: Image-to-3D Generation
-
-Convert any 2D image into a textured 3D model with a single API call. Perfect for:
-- Product visualization
-- AR/VR prototyping
-- Creative experimentation
-
-The system automatically extracts objects from images and generates downloadable 3D files (GLB format) that work with any 3D viewer.
-
----
+## Vibe Coding Capabilities
 
 ### Smarter Architecture for Better Performance
 
-We've reorganized how AI agents receive context:
+We've reorganized how AI agents receive context to make your vibe coding experience faster and more accurate.
 
 **Before:** One large rules file loaded every time, regardless of what you were building.
 
@@ -52,16 +28,32 @@ We've reorganized how AI agents receive context:
 
 This means faster responses, lower costs, and more accurate help since the AI only sees what it needs for your current task.
 
----
+Additionally, the rules now work automatically with multiple AI coding tools:
+- Claude Code (CLI)
+- Cursor (IDE)
+- DevMate VS Code (IDE)
 
-### Prompt Wizard — Now on Menace
+Just drop the rules folder into any project — no configuration needed.
 
-The Prompt Wizard tool is now hosted on Menace with new capabilities:
-- **Personal prompt history** — Your prompts are automatically saved to a personal database
-- **Resume anytime** — Pick up where you left off across sessions
-- **Faster access** — No local setup required
+### Expanded Model Library
 
----
+We've refreshed the entire model lineup with 10 new models across three providers. All models support text, images, documents, and multi-turn conversations.
+
+**Claude Models:**
+- Haiku 4.5 — Fast, lightweight tasks
+- Sonnet 4.5 — Balanced performance
+- Opus 4.1 — Highest quality output
+
+**Gemini Models:**
+- Gemini 2.5 Flash — Fast general tasks
+- Gemini 2.5 Flash-Lite — Fastest, most affordable option
+- Gemini 2.5 Flash-Image — Optimized for image analysis
+- Gemini 2.5 Pro — Complex reasoning with chain-of-thought
+
+**GPT Models:**
+- GPT 5.1 — General purpose
+- GPT 5.2 — Advanced capabilities
+- GPT 5.2-Chat — Optimized for conversations
 
 ### Simplified API Key Setup
 
@@ -70,12 +62,15 @@ The one-time setup popup has been streamlined:
 - Cleaner interface with fewer steps
 - Faster validation using our most efficient model
 
----
+### Image-to-3D Generation
 
-### What's Next
+Convert any 2D image into a textured 3D model. Perfect for:
+- Product visualization
+- AR/VR prototyping
+- Creative experimentation
+
+The system automatically extracts objects from images and generates downloadable 3D files (GLB format) that work with any 3D viewer.
+
+---
 
 We're continuing to improve the platform based on your feedback. If you have ideas or run into issues, reach out through the usual channels.
-
----
-
-*For technical details and implementation examples, see the skill files in `.claude/skills/`*
