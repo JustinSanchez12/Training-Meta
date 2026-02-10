@@ -6,7 +6,7 @@
 
 ## Prompt Wizard v1.5
 
-The Prompt Wizard is now hosted on Matt with powerful new capabilities:
+The Prompt Wizard is now hosted on Manus with powerful new capabilities:
 
 - **Personal Prompt History** — Your prompts are automatically saved to a personal database, so you never lose your work
 - **Resume Anytime** — Pick up exactly where you left off across sessions
