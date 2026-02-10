@@ -242,6 +242,38 @@ Authorization: Bearer {ape-api-key}
 
 **Endpoint:** `GET https://api.wearables-ape.io/files/{file_id}?file_type=web_generated`
 
+### Step 3: Convert to Blob URL for Display
+
+> **CRITICAL:** Image URLs require authentication headers, but `<img src>` tags cannot include auth headers. You MUST fetch images with authentication and convert to blob URLs.
+
+```javascript
+async function getImageBlobUrl(fileId) {
+  const response = await fetch(
+    `https://api.wearables-ape.io/files/${fileId}?file_type=web_generated`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('ape-api-key')}`
+      }
+    }
+  );
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+// Usage
+const blobUrl = await getImageBlobUrl(fileId);
+document.getElementById('myImage').src = blobUrl;
+
+// Clean up when done (prevents memory leaks)
+URL.revokeObjectURL(blobUrl);
+```
+
+**Never do this:**
+```javascript
+// WRONG - will fail with 401 Unauthorized
+img.src = `https://api.wearables-ape.io/files/${fileId}?file_type=web_generated`;
+```
+
 ---
 
 ## 6. Structured Memories (JSON Storage)
