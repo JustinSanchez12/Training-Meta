@@ -268,9 +268,22 @@ Authorization: Bearer {ape-api-key}
 
 ---
 
-## 5. Image Generation (nano-banana)
+## 5. Image Generation (NanoBanana)
 
 **Two-step process. Images expire after 30 days.**
+
+### Available Models
+
+| Model | Use Case | Default |
+|-------|----------|---------|
+| `nano-banana` | Standard image generation — use for most cases | **Yes** |
+| `nano-banana-pro` | High-quality/complex images requiring more detail | No |
+
+**Always use `nano-banana` unless:**
+- User explicitly requests higher quality
+- Complex scenes with many elements
+- Photorealistic requirements
+- Fine detail work (text in images, intricate patterns)
 
 ### Step 1: Generate
 
@@ -279,7 +292,7 @@ Authorization: Bearer {ape-api-key}
 **Payload:**
 ```json
 {
-  "model_api_name": "nano-banana-pro",
+  "model_api_name": "nano-banana",
   "name": "llm-image-gen",
   "output_type": "file_id",
   "user": "<prompt>",
@@ -330,12 +343,12 @@ img.src = `https://api.wearables-ape.io/files/${fileId}?file_type=web_generated`
 Image generation may fail due to backend capacity issues. Implement retry with exponential backoff (up to 5 retries, 1-5 second delays).
 
 ```javascript
-async function generateImageWithRetry(prompt, maxRetries = 5) {
+async function generateImageWithRetry(prompt, model = 'nano-banana', maxRetries = 5) {
   const delays = [1000, 2000, 3000, 4000, 5000]; // 1s to 5s
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[ImageGen] Attempt ${attempt + 1}/${maxRetries + 1}`);
+      console.log(`[ImageGen] Attempt ${attempt + 1}/${maxRetries + 1} with ${model}`);
 
       const response = await fetch(
         'https://api.wearables-ape.io/conversations?sync=true',
@@ -346,7 +359,7 @@ async function generateImageWithRetry(prompt, maxRetries = 5) {
             'Authorization': `Bearer ${localStorage.getItem('ape-api-key')}`
           },
           body: JSON.stringify({
-            model_api_name: 'nano-banana-pro',
+            model_api_name: model,
             name: 'llm-image-gen',
             output_type: 'file_id',
             user: prompt
@@ -383,14 +396,22 @@ async function generateImageWithRetry(prompt, maxRetries = 5) {
   }
 }
 
-// Usage
+// Usage - default model (nano-banana)
 try {
   const fileId = await generateImageWithRetry('A sunset over mountains');
   const blobUrl = await getImageBlobUrl(fileId);
   document.getElementById('myImage').src = blobUrl;
 } catch (error) {
   console.error('Failed to generate image:', error);
-  // Show fallback or error message to user
+}
+
+// Usage - pro model for complex/high-quality images
+try {
+  const fileId = await generateImageWithRetry('Photorealistic portrait with fine details', 'nano-banana-pro');
+  const blobUrl = await getImageBlobUrl(fileId);
+  document.getElementById('myImage').src = blobUrl;
+} catch (error) {
+  console.error('Failed to generate image:', error);
 }
 ```
 
