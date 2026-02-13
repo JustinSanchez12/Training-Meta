@@ -83,7 +83,7 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 ### 5. Other APIs
 
 - **Whisper:** `POST https://api.wearables-ape.io/models/v1/audio/transcriptions`
-- **Image Gen:** `POST https://api.wearables-ape.io/conversations?sync=true` — use `nano-banana` (default) or `nano-banana-pro` (complex/high-quality) — **must convert to blob URL, use retry with backoff**
+- **Image Gen:** `POST https://api.wearables-ape.io/conversations?sync=true` — use `nano-banana` (default) or `nano-banana-pro` (complex/high-quality) — **must convert to blob URL, use retry with backoff** — HTTP 400/401 with `Vertex_aiException` = backend capacity issue, not your API key
 - **JSON Storage:** `https://api.wearables-ape.io/structured-memories/{key}`
 - **File Storage:** `https://api.wearables-ape.io/files/` (30-day expiration)
 - **Image-to-3D:** `POST https://api.wearables-ape.io/models/custom/invoke` (SAM3 + SAM3D)

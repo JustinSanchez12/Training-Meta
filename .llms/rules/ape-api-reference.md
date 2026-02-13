@@ -291,6 +291,21 @@ Authorization: Bearer {ape-api-key}
 - Photorealistic requirements
 - Fine detail work (text in images, intricate patterns)
 
+### Backend Capacity Errors
+
+> **WARNING:** HTTP 400/401 errors with messages like `litellm.AuthenticationError: Vertex_aiException` are **NOT user API key issues**. These indicate the APE backend service is at capacity or experiencing internal authentication issues with Google Vertex AI. This is outside your control.
+
+**When you see these errors:**
+- Your code is correct
+- Your API key is valid
+- The APE service backend is temporarily unavailable
+- **Solution:** Wait and retry later (use the retry mechanism below)
+
+**Common error patterns indicating backend capacity issues:**
+- `HTTP 400: {"error": "litellm.AuthenticationError: Vertex_aiException..."}`
+- `HTTP 401` on image generation (but LLM calls work fine)
+- Intermittent failures that weren't happening before
+
 ### Step 1: Generate
 
 **Endpoint:** `POST https://api.wearables-ape.io/conversations?sync=true`
