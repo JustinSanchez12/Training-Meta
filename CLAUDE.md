@@ -91,7 +91,7 @@ Condensed API reference for all APE platform endpoints. For detailed code exampl
 ### 6. Development Standards
 
 - **Stack:** HTML, CSS, JavaScript
-- **Testing:** Always serve apps on a local server (never open HTML files directly)
+- **App Delivery & Testing (MANDATORY):** On every task completion, serve the app on a local dev server, share the URL with the user, and warn them: "This is NOT a shareable link — it will stop working when you close your AI coding session." Check for existing servers before starting a new one. Never open HTML files directly (`file:///`). Use `npx serve`, `npx http-server`, `python3 -m http.server` (macOS/Linux), or `python -m http.server` (Windows).
 - **Analytics:** Google Analytics tag `G-Q98010P7LZ`
 - **Debuggability:** Extensive `console.log()` statements
 - **Media:** Use `https://picsum.photos/` for placeholders

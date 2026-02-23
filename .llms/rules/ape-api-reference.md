@@ -574,10 +574,31 @@ Convert image + mask to 3D GLB. Processing time: **30-40 seconds**.
 - **Environment:** Chrome on MacOS
 - **Network:** Any accessible API allowed
 
-### Testing Apps
-- **Always serve apps on a local server** — Never suggest opening HTML files directly in the browser
-- Use `npx serve`, `python -m http.server`, or similar to start a local server
-- This ensures proper handling of ES modules, fetch requests, and CORS policies
+### App Delivery & Testing
+
+**MANDATORY: On every task or work completion, the AI coding agent MUST serve the app on a local dev server and share the URL with the user.**
+
+#### Workflow
+
+1. **Check for an existing server first** — Before starting a new server, check if one is already running for that app (e.g., check the terminal/process list) to avoid port conflicts and duplicate servers
+2. **Start a local dev server** if none is running — use one of the cross-platform commands below
+3. **Share the local server URL** (e.g., `http://localhost:3000`) and tell the user: **"You can test your app here: [URL]"**
+4. **Warn the user explicitly:** **"This is NOT a shareable link — it will stop working as soon as you close your current AI coding session."**
+
+#### Cross-Platform Server Commands
+
+| Command | Platform | Notes |
+|---------|----------|-------|
+| `npx serve` | macOS, Windows, Linux | Node.js required, auto-picks available port |
+| `npx http-server` | macOS, Windows, Linux | Node.js required, lightweight alternative |
+| `python3 -m http.server` | macOS, Linux | Python 3 built-in |
+| `python -m http.server` | Windows | Python 3 built-in (Windows uses `python` not `python3`) |
+
+#### Rules
+
+- **NEVER suggest opening an HTML file directly** from the file system (e.g., `file:///...`) — this breaks ES modules, fetch requests, and CORS policies
+- Always serve from a local server to ensure proper handling of ES modules, fetch requests, and CORS policies
+- If the project has its own dev server (e.g., `npm start`, `npm run dev`), prefer that over generic static servers
 
 ### Media Handling
 - **Priority:** Use provided media URLs exactly
