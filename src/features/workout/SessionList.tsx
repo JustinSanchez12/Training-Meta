@@ -1,15 +1,16 @@
 import { useLayoutEffect, useRef } from 'react';
-import type { ExerciseEntry, WeightUnit } from '@/lib/game/schema';
+import type { WeightUnit } from '@/lib/game/schema';
 import { formatExerciseData } from '@/lib/game/workout';
+import type { SessionItem } from './schema';
 
 interface SessionListProps {
-  entries: readonly ExerciseEntry[];
+  items: readonly SessionItem[];
   weightUnit: WeightUnit;
-  onRemove(index: number): void;
+  onRemove(id: string): void;
   disabled?: boolean;
 }
 
-export function SessionList({ entries, weightUnit, onRemove, disabled = false }: SessionListProps) {
+export function SessionList({ items, weightUnit, onRemove, disabled = false }: SessionListProps) {
   const removeButtons = useRef<(HTMLButtonElement | null)[]>([]);
   const emptyMessage = useRef<HTMLParagraphElement>(null);
   const focusAfterRemove = useRef<number | null>(null);
@@ -19,11 +20,11 @@ export function SessionList({ entries, weightUnit, onRemove, disabled = false }:
     const index = focusAfterRemove.current;
     if (index === null) return;
     focusAfterRemove.current = null;
-    if (entries.length === 0) emptyMessage.current?.focus();
-    else removeButtons.current[Math.min(index, entries.length - 1)]?.focus();
-  }, [entries]);
+    if (items.length === 0) emptyMessage.current?.focus();
+    else removeButtons.current[Math.min(index, items.length - 1)]?.focus();
+  }, [items]);
 
-  if (entries.length === 0) {
+  if (items.length === 0) {
     return (
       <p ref={emptyMessage} className="session-empty" tabIndex={-1}>
         No exercises added yet. Select an exercise above.
@@ -33,10 +34,10 @@ export function SessionList({ entries, weightUnit, onRemove, disabled = false }:
 
   return (
     <ul className="session-list">
-      {entries.map((entry, index) => {
+      {items.map(({ id, entry }, index) => {
         const details = formatExerciseData(entry.stat, entry.data, weightUnit);
         return (
-          <li key={entry.timestamp} className="session-exercise-item">
+          <li key={id} className="session-exercise-item">
             <span className="session-ex-info">
               {entry.icon} {entry.name} — {details}
             </span>
@@ -51,7 +52,7 @@ export function SessionList({ entries, weightUnit, onRemove, disabled = false }:
               disabled={disabled}
               onClick={() => {
                 focusAfterRemove.current = index;
-                onRemove(index);
+                onRemove(id);
               }}
             >
               ✕

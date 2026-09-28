@@ -6,6 +6,7 @@ import { StatsScreen } from '@/features/stats/StatsScreen';
 import { ExerciseForm } from '@/features/workout/ExerciseForm';
 import { WorkoutLayout } from '@/features/workout/WorkoutLayout';
 import { WorkoutScreen } from '@/features/workout/WorkoutScreen';
+import { WorkoutSessionProvider } from '@/features/workout/WorkoutSessionProvider';
 import { usePlayer } from './playerContext';
 
 function AppRoutes() {
@@ -13,18 +14,21 @@ function AppRoutes() {
   // Wait for the save to load so guards don't redirect a returning player to Start.
   if (status === 'loading') return null;
 
+  // Above the routes so an in-progress workout (and a save in flight) survives leaving /workout.
   return (
-    <Routes>
-      <Route path="/" element={<StartScreen />} />
-      <Route path="/create" element={<CharacterWizard />} />
-      <Route path="/hub" element={<HubScreen />} />
-      <Route path="/stats" element={<StatsScreen />} />
-      <Route path="/workout" element={<WorkoutLayout />}>
-        <Route index element={<WorkoutScreen />} />
-        <Route path=":stat" element={<ExerciseForm />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <WorkoutSessionProvider>
+      <Routes>
+        <Route path="/" element={<StartScreen />} />
+        <Route path="/create" element={<CharacterWizard />} />
+        <Route path="/hub" element={<HubScreen />} />
+        <Route path="/stats" element={<StatsScreen />} />
+        <Route path="/workout" element={<WorkoutLayout />}>
+          <Route index element={<WorkoutScreen />} />
+          <Route path=":stat" element={<ExerciseForm />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </WorkoutSessionProvider>
   );
 }
 

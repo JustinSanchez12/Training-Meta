@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePlayer } from '@/app/playerContext';
 import { STAT_DEFINITIONS, STAT_ORDER, formatCategory, type StatCategory, type StatKey } from '@/lib/game/stats';
@@ -15,32 +15,25 @@ const CATEGORIES = STAT_ORDER.reduce((groups, key) => {
 }, new Map<StatCategory, StatKey[]>());
 
 export function WorkoutScreen() {
-  const { logWorkout } = usePlayer();
-  const { save, entries, removeEntry, removeEntries } = useWorkoutSession();
+  const { save } = usePlayer();
+  const { items, removeItem, finishing, finishError, finish } = useWorkoutSession();
   const navigate = useNavigate();
-  const [error, setError] = useState<string | null>(null);
-  const [finishing, setFinishing] = useState(false);
 
-  const totalXp = roundXp(entries.reduce((sum, entry) => sum + entry.xpGained, 0));
-  const count = entries.length;
+  // Only redirect after a save if the player is still here; if they left mid-save, don't yank them back.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
-  async function finish() {
-    if (count === 0) {
-      setError('Add at least one exercise before finishing!');
-      return;
-    }
-    setFinishing(true);
-    setError(null);
-    const logged = entries;
-    try {
-      await logWorkout(logged);
-      removeEntries(logged);
-      navigate('/hub');
-    } catch (err) {
-      console.error('[Workout] Failed to save workout', err);
-      setError("Couldn't save your workout. Try again.");
-      setFinishing(false);
-    }
+  const totalXp = roundXp(items.reduce((sum, item) => sum + item.entry.xpGained, 0));
+  const count = items.length;
+
+  async function handleFinish() {
+    const result = await finish();
+    if (result && mounted.current) navigate('/hub');
   }
 
   return (
@@ -77,17 +70,22 @@ export function WorkoutScreen() {
 
         <section className="workout-section" aria-labelledby="current-session">
           <h3 id="current-session">Current Session</h3>
-          <SessionList entries={entries} weightUnit={save.player.weightUnit} onRemove={removeEntry} disabled={finishing} />
+          <SessionList
+            items={items}
+            weightUnit={save?.player.weightUnit ?? 'lbs'}
+            onRemove={removeItem}
+            disabled={finishing}
+          />
           <div className="session-footer">
             <span className="session-total">
               Total: +{totalXp} XP ({count} {count === 1 ? 'exercise' : 'exercises'})
             </span>
-            {error && (
+            {finishError && (
               <p className="form-error" role="alert">
-                {error}
+                {finishError}
               </p>
             )}
-            <button type="button" className="btn-primary btn-finish" onClick={finish} disabled={finishing}>
+            <button type="button" className="btn-primary btn-finish" onClick={handleFinish} disabled={finishing}>
               ✅ Finish Workout
             </button>
           </div>

@@ -89,3 +89,34 @@ a.hub-panel {
   white-space: nowrap;
   border: 0;
 }
+
+/* Hub name is an <h1> (focus target after dialogs); keep the legacy div's weight. */
+h1.hub-player-name {
+  font-weight: normal;
+}
+
+/* Headings focused programmatically (tabindex="-1") don't need a focus ring. */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
+.levelup-list {
+  list-style: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-popup,
+  .xp-popup.show,
+  .xp-popup.fade {
+    transition: none;
+    transform: translate(-50%, -50%);
+  }
+
+  .levelup-overlay {
+    transition: none;
+  }
+
+  .levelup-title {
+    animation: none;
+  }
+}

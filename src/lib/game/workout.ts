@@ -92,10 +92,17 @@ export function buildExerciseEntry(stat: StatKey, input: ExerciseInput, context:
 }
 
 /** Adds an entry to the in-progress session. A new weigh-in replaces any earlier one: one Weight entry per session. */
-export function addToSession(session: readonly ExerciseEntry[], entry: ExerciseEntry): ExerciseEntry[] {
-  const isWeight = (e: ExerciseEntry) => STAT_DEFINITIONS[e.stat].xpType === 'weight';
-  const kept = isWeight(entry) ? session.filter((e) => !isWeight(e)) : session;
-  return [...kept, entry];
+export function addToSession(session: readonly ExerciseEntry[], entry: ExerciseEntry): ExerciseEntry[];
+/** Same rule for session items that wrap an entry (e.g. with an id). */
+export function addToSession<T>(session: readonly T[], item: T, entryOf: (item: T) => ExerciseEntry): T[];
+export function addToSession<T>(
+  session: readonly T[],
+  item: T,
+  entryOf: (item: T) => ExerciseEntry = (value) => value as unknown as ExerciseEntry,
+): T[] {
+  const isWeight = (value: T) => STAT_DEFINITIONS[entryOf(value).stat].xpType === 'weight';
+  const kept = isWeight(item) ? session.filter((value) => !isWeight(value)) : session;
+  return [...kept, item];
 }
 
 /** One-line summary, e.g. "3×10 @ 135 lbs". Tolerates legacy data with missing or null fields. */
