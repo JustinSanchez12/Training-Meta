@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { EXERCISE_INPUT_SCHEMAS, type ExerciseInput } from '@/lib/game/exercise';
 import { StatKeySchema } from '@/lib/game/schema';
@@ -24,6 +25,7 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const inputs = useRef(new Map<string, HTMLInputElement>());
+  const [errorSummary, setErrorSummary] = useState('');
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -34,8 +36,14 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
         const field = String(issue.path[0]);
         fieldErrors[field] ??= issue.message;
       }
-      setErrors(fieldErrors);
-      // Focus the first invalid field (in form order) so its error is announced via aria-describedby.
+      // Render the errors (aria-invalid + aria-describedby) before moving focus, so the field's error is
+      // read on focus. Clearing the summary first makes the live region re-announce on repeat submits.
+      flushSync(() => {
+        setErrors(fieldErrors);
+        setErrorSummary('');
+      });
+      const count = Object.keys(fieldErrors).length;
+      setErrorSummary(count === 1 ? '1 field needs fixing.' : `${count} fields need fixing.`);
       const firstInvalid = fields.find((field) => fieldErrors[field.id]);
       if (firstInvalid) inputs.current.get(firstInvalid.id)?.focus();
       return;
@@ -105,6 +113,10 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
               </div>
             );
           })}
+          {/* Covers pressing Enter in an already-focused invalid field, where moving focus announces nothing. */}
+          <p className="visually-hidden" role="status" aria-live="polite">
+            {errorSummary}
+          </p>
           <button type="submit" className="btn-primary btn-log">
             ⚔️ Log Exercise
           </button>

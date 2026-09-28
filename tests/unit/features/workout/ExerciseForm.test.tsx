@@ -43,6 +43,38 @@ describe('ExerciseForm', () => {
     expect(await screen.findByLabelText(/current weight \(kg\)/i)).toBeInTheDocument();
   });
 
+  it('renders the error before focus moves, so the field is already invalid and described when focused', async () => {
+    const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
+    await screen.findByRole('button', { name: /log exercise/i });
+    const reps = screen.getByLabelText(/^reps/i);
+    await user.type(screen.getByLabelText(/^sets/i), '3');
+
+    let atFocus: { invalid: string | null; description: string | null } | undefined;
+    reps.addEventListener('focus', () => {
+      const describedBy = reps.getAttribute('aria-describedby');
+      atFocus = {
+        invalid: reps.getAttribute('aria-invalid'),
+        description: describedBy ? (document.getElementById(describedBy)?.textContent ?? null) : null,
+      };
+    });
+    await user.click(logButton());
+
+    expect(atFocus).toEqual({ invalid: 'true', description: 'Please enter reps.' });
+  });
+
+  it('announces a summary in a polite status region, including when Enter is pressed in the focused field', async () => {
+    const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
+    const sets = await screen.findByLabelText(/^sets/i);
+    await user.click(logButton());
+    expect(screen.getByRole('status')).toHaveTextContent('2 fields need fixing.');
+
+    await user.type(screen.getByLabelText(/^reps/i), '5');
+    sets.focus();
+    await user.keyboard('{Enter}');
+    expect(sets).toHaveFocus();
+    expect(screen.getByRole('status')).toHaveTextContent('1 field needs fixing.');
+  });
+
   it('describes each invalid field by its error (no alerts) and focuses the first invalid field', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
     await user.click(await screen.findByRole('button', { name: /log exercise/i }));
