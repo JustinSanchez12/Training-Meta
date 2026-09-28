@@ -27,29 +27,29 @@ None. Reads `save.stats` from `usePlayer()`. New helper `src/features/stats/stat
 5. `/stats` with no save redirects to `/`.
 
 ## Acceptance criteria
-- [ ] `getStatView` for 0 XP: level 1, fillPercent 0, xpText "0 / 20 XP".
-- [ ] benchPress at 30 XP: level 2, "10 / 13 XP", fillPercent ≈ 76.9.
-- [ ] Float XP 3.0000000000000004: "3 / 20 XP", totalXp 3.
-- [ ] 11573 XP or more: isMax, fillPercent 100, "MAX LEVEL".
-- [ ] categoryLabel "Cardio" for mileRun, and xpRule from `STAT_DEFINITIONS`.
-- [ ] StatsScreen renders 12 cell buttons in `STAT_ORDER` and the correct Total Level.
-- [ ] Clicking a cell opens a dialog with that stat's details. Back and Escape each close it.
-- [ ] The Hub Stats panel is enabled and links to `/stats`. The other three panels are still disabled.
-- [ ] `/stats` with no save redirects to `/`.
-- [ ] E2E: seeded save → Hub → Stats → Bench Press level 2 and Total Level 13 → open Bench Press → "10 / 13 XP", "Strength" and "sets × reps = XP" → Back → ← Hub.
+- [x] `getStatView` for 0 XP: level 1, fillPercent 0, xpText "0 / 20 XP".
+- [x] benchPress at 30 XP: level 2, "10 / 13 XP", fillPercent ≈ 76.9.
+- [x] Float XP 3.0000000000000004: "3 / 20 XP", totalXp 3.
+- [x] 11573 XP or more: isMax, fillPercent 100, "MAX LEVEL".
+- [x] categoryLabel "Cardio" for mileRun, and xpRule from `STAT_DEFINITIONS`.
+- [x] StatsScreen renders 12 cell buttons in `STAT_ORDER` and the correct Total Level.
+- [x] Clicking a cell opens a dialog with that stat's details. Back and Escape each close it.
+- [x] The Hub Stats panel is enabled and links to `/stats`. The other three panels are still disabled.
+- [x] `/stats` with no save redirects to `/`.
+- [x] E2E: seeded save → Hub → Stats → Bench Press level 2 and Total Level 13 → open Bench Press → "10 / 13 XP", "Strength" and "sets × reps = XP" → Back → ← Hub.
 
 ## Tests
 - Unit: `tests/unit/features/stats/statView.test.ts`, `tests/unit/features/stats/StatsScreen.test.tsx`, `tests/unit/features/hub/HubScreen.test.tsx`.
 - E2E: `tests/e2e/stats.spec.ts`. Seed `legacySave()` via `page.addInitScript`. Add a second test: `/stats` with no save redirects to Start.
 
 ## Tasks
-- [ ] Add `src/features/stats/statView.ts`.
-- [ ] Add `src/features/stats/StatDetailPanel.tsx` (dialog, Back, Escape, focus).
-- [ ] Add `src/features/stats/StatsScreen.tsx` (guard, header, grid, selected state).
-- [ ] Register `/stats` in `src/app/App.tsx`.
-- [ ] Enable the Stats panel in `src/features/hub/HubScreen.tsx`.
-- [ ] Add button resets for `.stat-cell` in `src/app/port.css`.
-- [ ] Add unit and e2e tests. Tick this checklist.
+- [x] Add `src/features/stats/statView.ts`.
+- [x] Add `src/features/stats/StatDetailPanel.tsx` (dialog, Back, Escape, focus).
+- [x] Add `src/features/stats/StatsScreen.tsx` (guard, header, grid, selected state).
+- [x] Register `/stats` in `src/app/App.tsx`.
+- [x] Enable the Stats panel in `src/features/hub/HubScreen.tsx`.
+- [x] Add button resets for `.stat-cell` in `src/app/port.css`.
+- [x] Add unit and e2e tests. Tick this checklist.
 
 ## Later slices (not in this PR)
 - Slice 3 `feat/react-port-workout`: workout logging, XP gain, level-up overlay, streak, and per-type exercise schemas. Fix the legacy bug where the Weight form sends `currentWeight` but XP reads `change`, so Weight never earns XP. Decide whether streak dates use local time or UTC.
