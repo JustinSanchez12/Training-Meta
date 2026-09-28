@@ -1,104 +1,76 @@
-# APE Platform Development Rules
+# The Training Meta
 
-This file provides AI coding agents with the context and rules needed to build applications on the APE platform.
+A fitness RPG: players level up real-life "stats" (1–99) by logging workouts and healthy habits.
+See `README.md` for the game design and XP rules.
 
-## Overview
+## Stack
 
-APE (API Platform for Experiments) provides a unified API for LLMs, image generation, audio transcription, and cloud storage. All endpoints are hosted at `https://api.wearables-ape.io`.
+| Layer | Choice |
+|-------|--------|
+| UI | React 18 + TypeScript + Vite |
+| Validation | Zod (schemas are the source of truth for types: `z.infer<typeof X>`) |
+| Data + auth | Supabase (Postgres, Auth, Row Level Security) |
+| Hosting | Vercel (static build + serverless functions in `api/`) |
+| Unit tests | Vitest + React Testing Library |
+| E2E tests | Playwright |
+| Node | 20 LTS or newer (see `.nvmrc`) |
 
-## Tech Stack
+> **Migration in progress:** the current app in `index.html`, `css/` and `js/` is legacy vanilla JS.
+> Porting it to React is the first `/new-feature`. Until then, run it with `npx serve .`.
+> Don't add features to the legacy files.
 
-- **Frontend:** HTML, CSS, JavaScript (vanilla)
-- **Environment:** Chrome on MacOS
-- **APIs:** APE Platform (LLMs, Vision, Audio, Storage)
+Optional AI layer: APE (`docs/ape-api.md`). Only call it from `api/`, never from the browser.
 
-## Key Commands
+## Key commands
 
 | Task | Command |
 |------|---------|
-| Run locally | `npx serve` or `python -m http.server` |
-| Debug | Open Chrome DevTools (F12) |
+| Install | `npm install` |
+| Dev server | `npm run dev` |
+| Build | `npm run build` |
+| Typecheck | `npm run typecheck` |
+| Lint | `npm run lint` |
+| Unit tests | `npm test` (watch: `npm run test:watch`) |
+| E2E tests | `npm run test:e2e` (first time: `npx playwright install chromium`) |
+| New DB migration | `npx supabase migration new <name>` |
+| Apply migrations locally | `npx supabase db reset` (needs Docker) |
 
----
+## Folder conventions
 
-<!-- BEGIN SYNCED RULES -->
+```
+src/
+  app/             routing, providers, layout
+  features/<name>/ one folder per feature: components, hooks, schema.ts, api.ts
+  components/      shared presentational components only
+  lib/             supabase client, env.ts (Zod-parsed env), utilities
+api/               Vercel serverless functions (server-only secrets live here)
+supabase/migrations/  SQL migrations, never edit one that has been applied
+tests/unit/        mirrors src/ paths: src/lib/xp.ts -> tests/unit/lib/xp.test.ts
+tests/e2e/         one spec per feature: <feature>.spec.ts
+docs/              spec.md (current feature), decisions, reference
+```
 
-## APE API Reference
+- Feature code stays inside `src/features/<name>/`. Promote something to `components/` or `lib/` only when a second feature needs it.
+- Files: `PascalCase.tsx` for components, `camelCase.ts` for everything else.
 
-Condensed API reference for all APE platform endpoints. For detailed code examples, use the corresponding skills.
+## Rules
 
-### 1. Authentication
+1. **Validate all input with Zod.** This covers form input, URL params, `localStorage`, API request bodies in `api/`, and Supabase rows at the boundary. Use `safeParse` and handle the error; don't use `as` casts on external data.
+2. **Never commit secrets.** Real values go only in `.env.local` (gitignored) and in Vercel/Supabase dashboards. Update `.env.example` whenever you add a variable. Only `VITE_`-prefixed vars reach the browser, so never prefix a secret with `VITE_`.
+3. **Every feature needs an e2e test.** It needs at least one Playwright spec covering its happy path, plus unit tests for its logic (see the `testing` skill). A PR without one isn't done.
+4. **Row Level Security on every table.** Enable RLS in the same migration that creates the table.
+5. **Strict TypeScript.** No `any` and no `@ts-ignore` without a comment explaining why.
+6. **Small PRs.** One feature per branch `feat/<slug>`, off `main`, PR back to `main`. The owner reviews and merges; agents never merge or push to `main`.
 
-**API Key Storage:**
-- **Location:** `localStorage` key `ape-api-key`
-- **Authorization:** `Bearer <ape-api-key>` header on all requests
-- **Validation timestamp:** `localStorage` key `ape-api-key-last-validated`
+## Workflow
 
-**Validation Endpoint:**
-- **POST** `https://api.wearables-ape.io/models/v1/chat/completions`
-- **Payload:** `{"model": "gemini-2.5-flash-lite", "messages": [{"role": "user", "content": "test"}], "max_tokens": 5}`
-- Validate once per 24 hours; on failure, clear keys and show setup popup
+- New feature: `/new-feature <idea>` runs the `feature-workflow` skill (spec → branch → build → test → review → PR).
+- Specs live in `docs/spec.md`. Its task checklist replaces the old `tasks.md`, which is now in `docs/archive/`.
+- Agents: `planner` (writes specs), `code-reviewer` (read-only review), `qa-tester` (writes and runs tests).
+- Before deploying, use the `deploy-checklist` skill.
+- Use the Context7 MCP for current library docs and the Playwright MCP to check UI in a real browser.
 
-### 2. Rate Limiting
+## Legacy APE files
 
-**All endpoints are rate limited to 1 call per second per model.**
-
-- Wait 1 second between **sends**, not between responses — no need to wait for previous response
-- Each model has independent rate limits — send to different models simultaneously
-- Use a global queue per model to manage intervals
-
-> **WARNING:** Rate limit errors return `{"error":"Unauthorized."}` which is **misleading**. This is NOT an authentication error - it indicates you've exceeded the rate limit.
-
-### 3. Available Models
-
-| Model ID | Type | Best For |
-|----------|------|----------|
-| `claude-haiku-4.5` | Claude | Fast, lightweight tasks |
-| `claude-opus-4.1` | Claude | Highest quality output |
-| `claude-sonnet-4.5` | Claude | Balanced performance |
-| `gemini-2.5-flash` | Gemini | Fast general tasks |
-| `gemini-2.5-flash-image` | Gemini | Image-optimized tasks |
-| `gemini-2.5-flash-lite` | Gemini | Fastest, cheapest option |
-| `gemini-2.5-pro` | Gemini | Complex reasoning (exposes `reasoning_content`) |
-| `gpt-5.1` | GPT | General purpose |
-| `gpt-5.2` | GPT | Advanced capabilities |
-| `gpt-5.2-chat` | GPT | Chat-optimized |
-
-**All models support:** Text, Vision (images), Documents, System prompts, Multi-turn conversations
-
-### 4. LLM APIs
-
-**Async Endpoint (PRIMARY):**
-- **Step 1:** `POST https://api.wearables-ape.io/conversations?sync=false`
-- **Step 2:** `GET https://api.wearables-ape.io/conversations/{cid}/{taskId}` (poll every 500ms until `state === "COMPLETE"`)
-
-**Sync Endpoint (BACKUP):**
-- **Endpoint:** `POST https://api.wearables-ape.io/models/v1/chat/completions`
-- Use when async endpoint has issues
-
-**Vision:** Use `image_url` with `detail: "high"` (works with all models)
-
-**gemini-2.5-pro:** Returns `reasoning_content` field with chain-of-thought
-
-### 5. Other APIs
-
-- **Whisper:** `POST https://api.wearables-ape.io/models/v1/audio/transcriptions`
-- **Image Gen:** `POST https://api.wearables-ape.io/conversations?sync=true` — use `nano-banana` (default) or `nano-banana-pro` (complex/high-quality) — **must convert to blob URL, use retry with backoff** — HTTP 400/401 with `Vertex_aiException` = backend capacity issue, not your API key
-- **JSON Storage:** `https://api.wearables-ape.io/structured-memories/{key}`
-- **File Storage:** `https://api.wearables-ape.io/files/` (30-day expiration)
-- **Image-to-3D:** `POST https://api.wearables-ape.io/models/custom/invoke` (SAM3 + SAM3D)
-
-### 6. Development Standards
-
-- **Stack:** HTML, CSS, JavaScript
-- **App Delivery & Testing (MANDATORY):** On every task completion, serve the app on a local dev server, share the URL with the user, and warn them: "This is NOT a shareable link — it will stop working when you close your AI coding session." Check for existing servers before starting a new one. Never open HTML files directly (`file:///`). Use `npx serve`, `npx http-server`, `python3 -m http.server` (macOS/Linux), or `python -m http.server` (Windows).
-- **Analytics:** Google Analytics tag `G-Q98010P7LZ`
-- **Debuggability:** Extensive `console.log()` statements
-- **Media:** Use `https://picsum.photos/` for placeholders
-- **README:** Include "Original Prompt" section and `"Protohub fullscreen deployment: true"`
-
-### 7. Execution Methodology
-
-Use `tasks.md` for all development tracking. Follow Update-Execute-Complete loop.
-
-<!-- END SYNCED RULES -->
+`.cursor/`, `.llms/`, the `ape-*` skills and the `ape-scaffolder`/`ape-debugger` agents come from the
+original APE template. They target vanilla JS. Only use them when working with APE APIs.

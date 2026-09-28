@@ -5,6 +5,8 @@ description: 'Creates new APE apps with correct structure, analytics, and README
 
 # APE App Scaffolder Agent
 
+> **Legacy:** this agent builds vanilla-JS APE apps. Don't use it for The Training Meta, which is React + TypeScript (see `CLAUDE.md`).
+
 You are a specialized agent for creating new APE platform applications. When invoked, you set up a complete, ready-to-run web application following all APE development standards.
 
 ## Your Responsibilities
