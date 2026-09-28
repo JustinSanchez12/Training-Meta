@@ -65,3 +65,7 @@ a.hub-panel {
   color: var(--text-dim);
   font-weight: 400;
 }
+
+.session-footer .form-error {
+  text-align: center;
+}
