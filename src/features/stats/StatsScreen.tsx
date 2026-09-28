@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { usePlayer } from '@/app/playerContext';
 import { STAT_ORDER, type StatKey } from '@/lib/game/stats';
@@ -15,7 +15,8 @@ export function StatsScreen() {
 
   // While the detail panel is open, the screen behind it is inert: not focusable and hidden from
   // assistive tech. On close, focus returns to the cell that opened it (only possible once it isn't inert).
-  useEffect(() => {
+  // Layout effect so focus moves before paint and never drops to <body> in between.
+  useLayoutEffect(() => {
     backgroundRef.current?.toggleAttribute('inert', selected !== null);
     if (selected) {
       openedFrom.current = selected;

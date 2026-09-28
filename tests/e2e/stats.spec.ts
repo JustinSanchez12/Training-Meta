@@ -66,11 +66,15 @@ test.describe('stats screen', () => {
       return document.activeElement === cell;
     });
     expect(cellTookFocus).toBe(false);
+    await expect(page.locator('[inert]')).toHaveCount(1);
 
     for (const key of ['Shift+Tab', 'Tab', 'Tab']) {
       await page.keyboard.press(key);
-      const focusIsBehindPanel = await page.evaluate(() => !!document.activeElement?.closest('[inert]'));
-      expect(focusIsBehindPanel, `focus escaped the panel after ${key}`).toBe(false);
+      // Focus must stay in the dialog, or leave the page entirely (body / browser UI), never reach the grid.
+      const focusOk = await page.evaluate(
+        () => document.activeElement === document.body || !!document.activeElement?.closest('[role="dialog"]'),
+      );
+      expect(focusOk, `focus escaped the panel after ${key}`).toBe(true);
     }
     await expect(page.getByRole('dialog', { name: 'Bench Press' })).toBeVisible();
   });
