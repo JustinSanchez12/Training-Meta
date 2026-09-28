@@ -28,31 +28,31 @@ A player can open the new React app, create a character (name, gender, age, weig
 4. `/hub` with no save redirects to `/`.
 
 ## Acceptance criteria
-- [ ] `typecheck`, `lint`, `test`, `build` and `test:e2e` all pass on a clean install with Node 24.
-- [ ] `getXpForLevel`: 1 → 0, 2 → 20, 99 → 11573 (legacy formula `floor(L²·1.1 + 8L)`).
-- [ ] `getLevelFromXp`: 0 and 19 → 1, 20 → 2, very large → 99.
-- [ ] `getXpProgress` at max level returns progress 1 and xpForNext 0.
-- [ ] Default stats give overall level 1 and total level 12.
-- [ ] `SaveDataSchema` accepts a legacy save and rejects bad stat keys, negative XP and a missing player.
-- [ ] `CharacterFormSchema` rejects an empty or whitespace name, a 21-char name, age 0, age 121, weight 0, and a missing gender.
-- [ ] Storage returns null for missing or corrupt JSON and round-trips a valid save.
-- [ ] The wizard doesn't advance past an invalid step and shows an error.
-- [ ] E2E: create a character → Hub shows the name → reload keeps it. An empty name blocks step 1.
+- [x] `typecheck`, `lint`, `test`, `build` and `test:e2e` all pass on a clean install with Node 24.
+- [x] `getXpForLevel`: 1 → 0, 2 → 20, 99 → 11573 (legacy formula `floor(L²·1.1 + 8L)`).
+- [x] `getLevelFromXp`: 0 and 19 → 1, 20 → 2, very large → 99.
+- [x] `getXpProgress` at max level returns progress 1 and xpForNext 0.
+- [x] Default stats give overall level 1 and total level 12.
+- [x] `SaveDataSchema` accepts a legacy save and rejects bad stat keys, negative XP and a missing player.
+- [x] `CharacterFormSchema` rejects an empty or whitespace name, a 21-char name, age 0, age 121, weight 0, and a missing gender.
+- [x] Storage returns null for missing or corrupt JSON and round-trips a valid save.
+- [x] The wizard doesn't advance past an invalid step and shows an error.
+- [x] E2E: create a character → Hub shows the name → reload keeps it. An empty name blocks step 1.
 
 ## Tests
 - Unit: `tests/unit/lib/game/xp.test.ts`, `tests/unit/lib/game/schema.test.ts`, `tests/unit/lib/storage.test.ts`, `tests/unit/features/character/schema.test.ts`, `tests/unit/features/character/CharacterWizard.test.tsx`.
 - E2E: `tests/e2e/character-creation.spec.ts`.
 
 ## Tasks
-- [ ] Move `index.html`, `css/` and `js/` to `legacy/`, and update the `legacy` script.
-- [ ] Install deps and add configs (tsconfig, vite + vitest, eslint, playwright, vercel.json).
-- [ ] Add `index.html`, `src/main.tsx`, `src/app/App.tsx` and `src/app/styles.css`.
-- [ ] Port `src/lib/game/{stats,xp,player,schema}.ts` with unit tests.
-- [ ] Add `src/lib/storage.ts` and `src/app/PlayerProvider.tsx` with unit tests.
-- [ ] Add `src/features/start/StartScreen.tsx`.
-- [ ] Add `src/features/character/` (wizard, schema, overlay) with tests.
-- [ ] Add `src/features/hub/HubScreen.tsx` with the route guard.
-- [ ] Add the e2e spec, and update the README and the CLAUDE.md migration note.
+- [x] Move `index.html`, `css/` and `js/` to `legacy/`, and update the `legacy` script.
+- [x] Install deps and add configs (tsconfig, vite + vitest, eslint, playwright, vercel.json).
+- [x] Add `index.html`, `src/main.tsx`, `src/app/App.tsx` and `src/app/styles.css`.
+- [x] Port `src/lib/game/{stats,xp,player,schema}.ts` with unit tests.
+- [x] Add `src/lib/storage.ts` and `src/app/PlayerProvider.tsx` with unit tests.
+- [x] Add `src/features/start/StartScreen.tsx`.
+- [x] Add `src/features/character/` (wizard, schema, overlay) with tests.
+- [x] Add `src/features/hub/HubScreen.tsx` with the route guard.
+- [x] Add the e2e spec, and update the README and the CLAUDE.md migration note.
 
 ## Later slices (not in this PR)
 - Slice 2 `feat/react-port-stats`: Stats grid and stat detail panel.
