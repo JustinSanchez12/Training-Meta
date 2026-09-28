@@ -43,6 +43,7 @@ function renderHub(save: SaveData | null) {
             <Route path="/" element={<h1>Start stub</h1>} />
             <Route path="/hub" element={<HubScreen />} />
             <Route path="/stats" element={<h1>Stats stub</h1>} />
+            <Route path="/workout" element={<h1>Workout stub</h1>} />
           </Routes>
           <LocationProbe />
         </WaitForLoad>
@@ -69,16 +70,32 @@ describe('HubScreen', () => {
     expect(stats).not.toHaveTextContent('Coming soon');
   });
 
-  it('keeps the other three panels disabled with "Coming soon"', async () => {
+  it('enables the Log Workout panel as a link to /workout', async () => {
+    renderHub(legacySave());
+    const workout = await screen.findByRole('link', { name: /log workout/i });
+    expect(workout).toHaveAttribute('href', '/workout');
+    expect(workout).toHaveTextContent('Train & earn XP');
+    expect(workout).not.toHaveTextContent('Coming soon');
+  });
+
+  it('keeps Quest Log and Profile disabled with "Coming soon"', async () => {
     renderHub(legacySave());
     await screen.findByRole('link', { name: /stats/i });
-    for (const title of ['Log Workout', 'Quest Log', 'Profile']) {
+    for (const title of ['Quest Log', 'Profile']) {
       const panel = screen.getByRole('button', { name: new RegExp(title) });
       expect(panel).toBeDisabled();
       expect(panel).toHaveTextContent('Coming soon');
     }
-    expect(screen.getAllByText('Coming soon')).toHaveLength(3);
-    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
+    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+  });
+
+  it('navigates to /workout when the Log Workout panel is clicked', async () => {
+    const user = renderHub(legacySave());
+    await user.click(await screen.findByRole('link', { name: /log workout/i }));
+    expect(await screen.findByRole('heading', { name: 'Workout stub' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/workout');
   });
 
   it('navigates to /stats when the Stats panel is clicked', async () => {
