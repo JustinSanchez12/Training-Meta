@@ -7,9 +7,12 @@ export interface WorkoutSession {
   entries: readonly ExerciseEntry[];
   addEntry(entry: ExerciseEntry): void;
   removeEntry(index: number): void;
-  clear(): void;
+  /** Removes exactly these entries (by identity), e.g. the ones just saved, keeping anything added meanwhile. */
+  removeEntries(entries: readonly ExerciseEntry[]): void;
 }
 
 export function useWorkoutSession(): WorkoutSession {
-  return useOutletContext<WorkoutSession>();
+  const context = useOutletContext<WorkoutSession | undefined>();
+  if (!context) throw new Error('useWorkoutSession must be used inside <WorkoutLayout>');
+  return context;
 }

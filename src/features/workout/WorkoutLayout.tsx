@@ -12,11 +12,14 @@ export function WorkoutLayout() {
 
   const addEntry = useCallback((entry: ExerciseEntry) => setEntries((prev) => addToSession(prev, entry)), []);
   const removeEntry = useCallback((index: number) => setEntries((prev) => prev.filter((_, i) => i !== index)), []);
-  const clear = useCallback(() => setEntries([]), []);
+  const removeEntries = useCallback(
+    (done: readonly ExerciseEntry[]) => setEntries((prev) => prev.filter((entry) => !done.includes(entry))),
+    [],
+  );
 
   const context = useMemo<WorkoutSession | null>(
-    () => (save ? { save, entries, addEntry, removeEntry, clear } : null),
-    [save, entries, addEntry, removeEntry, clear],
+    () => (save ? { save, entries, addEntry, removeEntry, removeEntries } : null),
+    [save, entries, addEntry, removeEntry, removeEntries],
   );
 
   if (!context) return <Navigate to="/" replace />;

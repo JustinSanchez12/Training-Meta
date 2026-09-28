@@ -69,3 +69,10 @@ a.hub-panel {
 .session-footer .form-error {
   text-align: center;
 }
+
+.plain-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}

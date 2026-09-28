@@ -16,7 +16,7 @@ const CATEGORIES = STAT_ORDER.reduce((groups, key) => {
 
 export function WorkoutScreen() {
   const { logWorkout } = usePlayer();
-  const { save, entries, removeEntry, clear } = useWorkoutSession();
+  const { save, entries, removeEntry, removeEntries } = useWorkoutSession();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
@@ -31,9 +31,10 @@ export function WorkoutScreen() {
     }
     setFinishing(true);
     setError(null);
+    const logged = entries;
     try {
-      await logWorkout(entries);
-      clear();
+      await logWorkout(logged);
+      removeEntries(logged);
       navigate('/hub');
     } catch (err) {
       console.error('[Workout] Failed to save workout', err);
@@ -54,26 +55,29 @@ export function WorkoutScreen() {
       <div className="workout-content">
         <section className="workout-section" aria-labelledby="choose-exercise">
           <h3 id="choose-exercise">Choose Exercise</h3>
-          {[...CATEGORIES].map(([category, keys]) => (
-            <div key={category} className="exercise-category">
-              <h4 className="category-title">{formatCategory(category)}</h4>
-              <div className="exercise-grid">
-                {keys.map((key) => (
-                  <button key={key} type="button" className="exercise-btn" onClick={() => navigate(`/workout/${key}`)}>
-                    <span className="ex-icon" aria-hidden="true">
-                      {STAT_DEFINITIONS[key].icon}
-                    </span>
-                    <span className="ex-name">{STAT_DEFINITIONS[key].name}</span>
-                  </button>
-                ))}
+          {/* Disabled while saving so nothing can be added (or navigated to) mid-save. */}
+          <fieldset className="plain-fieldset" disabled={finishing}>
+            {[...CATEGORIES].map(([category, keys]) => (
+              <div key={category} className="exercise-category">
+                <h4 className="category-title">{formatCategory(category)}</h4>
+                <div className="exercise-grid">
+                  {keys.map((key) => (
+                    <button key={key} type="button" className="exercise-btn" onClick={() => navigate(`/workout/${key}`)}>
+                      <span className="ex-icon" aria-hidden="true">
+                        {STAT_DEFINITIONS[key].icon}
+                      </span>
+                      <span className="ex-name">{STAT_DEFINITIONS[key].name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </fieldset>
         </section>
 
         <section className="workout-section" aria-labelledby="current-session">
           <h3 id="current-session">Current Session</h3>
-          <SessionList entries={entries} weightUnit={save.player.weightUnit} onRemove={removeEntry} />
+          <SessionList entries={entries} weightUnit={save.player.weightUnit} onRemove={removeEntry} disabled={finishing} />
           <div className="session-footer">
             <span className="session-total">
               Total: +{totalXp} XP ({count} {count === 1 ? 'exercise' : 'exercises'})

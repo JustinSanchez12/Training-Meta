@@ -28,7 +28,7 @@ describe('ExerciseForm', () => {
     ['mileRun', ['Distance (miles)'], '1 mile = 10 XP'],
     ['swimming', ['Laps'], '1 lap = 5 XP'],
     ['yoga', ['Sessions', 'Duration (min)'], '1 session = 10 XP'],
-    ['weight', ['Current Weight (lbs)'], '0.5-1 lb toward goal = 10 XP'],
+    ['weight', ['Current Weight (lbs)'], 'Lose 0.5+ lb (0.23 kg) since last weigh-in = 10 XP'],
     ['nutrition', ['Healthy Meals', 'Description'], '1 healthy meal = 5 XP'],
   ])('/workout/%s shows its fields', async (stat, labels, rule) => {
     renderWorkout(createMemoryRepository(legacySave()), `/workout/${stat}`);

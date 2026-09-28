@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { EXERCISE_INPUT_SCHEMAS, type ExerciseInput } from '@/lib/game/exercise';
 import { StatKeySchema } from '@/lib/game/schema';
@@ -23,6 +23,7 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
   const fields = getExerciseFields(def.xpType, unit);
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const inputs = useRef(new Map<string, HTMLInputElement>());
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -34,6 +35,9 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
         fieldErrors[field] ??= issue.message;
       }
       setErrors(fieldErrors);
+      // Focus the first invalid field (in form order) so its error is announced via aria-describedby.
+      const firstInvalid = fields.find((field) => fieldErrors[field.id]);
+      if (firstInvalid) inputs.current.get(firstInvalid.id)?.focus();
       return;
     }
 
@@ -69,6 +73,10 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
                   {field.optional && <span className="optional-label"> (optional)</span>}
                 </label>
                 <input
+                  ref={(el) => {
+                    if (el) inputs.current.set(field.id, el);
+                    else inputs.current.delete(field.id);
+                  }}
                   id={id}
                   name={field.id}
                   type={field.type}
@@ -90,7 +98,7 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
                   }}
                 />
                 {error && (
-                  <p id={errorId} className="form-error" role="alert">
+                  <p id={errorId} className="form-error">
                     {error}
                   </p>
                 )}

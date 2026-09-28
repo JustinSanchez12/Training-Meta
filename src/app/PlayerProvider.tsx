@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPlayer, type NewPlayerInput } from '@/lib/game/player';
 import type { ExerciseEntry, SaveData } from '@/lib/game/schema';
 import { applyWorkout } from '@/lib/game/workout';
@@ -18,7 +18,14 @@ interface PlayerProviderProps {
 export function PlayerProvider({ children, repository, now = defaultNow }: PlayerProviderProps) {
   const repo = useMemo(() => repository ?? createLocalSaveRepository(), [repository]);
   const [status, setStatus] = useState<PlayerContextValue['status']>('loading');
-  const [save, setSave] = useState<SaveData | null>(null);
+  const [save, setSaveState] = useState<SaveData | null>(null);
+  // Latest save, readable from async actions without waiting for a re-render (avoids stale-closure overwrites).
+  const saveRef = useRef<SaveData | null>(null);
+  const setSave = useCallback((next: SaveData | null) => {
+    saveRef.current = next;
+    setSaveState(next);
+  }, []);
+  const workoutInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,7 +43,7 @@ export function PlayerProvider({ children, repository, now = defaultNow }: Playe
     return () => {
       cancelled = true;
     };
-  }, [repo]);
+  }, [repo, setSave]);
 
   const createCharacter = useCallback(
     async (input: NewPlayerInput) => {
@@ -45,18 +52,26 @@ export function PlayerProvider({ children, repository, now = defaultNow }: Playe
       setSave(created);
       return created;
     },
-    [repo],
+    [repo, setSave],
   );
 
   const logWorkout = useCallback(
     async (exercises: readonly ExerciseEntry[]) => {
-      if (!save) throw new Error('Cannot log a workout without a character');
-      const result = applyWorkout(save, exercises, now());
-      await repo.save(result.save);
-      setSave(result.save);
-      return result;
+      const current = saveRef.current;
+      if (!current) throw new Error('Cannot log a workout without a character');
+      // Two overlapping calls would both build on the same save and the second write would erase the first.
+      if (workoutInFlight.current) throw new Error('A workout is already being saved');
+      workoutInFlight.current = true;
+      try {
+        const result = applyWorkout(current, exercises, now());
+        await repo.save(result.save);
+        setSave(result.save);
+        return result;
+      } finally {
+        workoutInFlight.current = false;
+      }
     },
-    [repo, save, now],
+    [repo, now, setSave],
   );
 
   const value = useMemo(
