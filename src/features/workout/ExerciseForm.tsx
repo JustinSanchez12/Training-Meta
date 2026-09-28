@@ -20,7 +20,7 @@ export function ExerciseForm() {
 }
 
 function ExerciseFormFields({ stat, save }: { stat: StatKey; save: SaveData }) {
-  const { addEntry } = useWorkoutSession();
+  const { addEntry, finishing } = useWorkoutSession();
   const { showXpGain } = useXpFeedback();
   const navigate = useNavigate();
   const def = STAT_DEFINITIONS[stat];
@@ -124,7 +124,8 @@ function ExerciseFormFields({ stat, save }: { stat: StatKey; save: SaveData }) {
           <p className="visually-hidden" role="status" aria-live="polite">
             {errorSummary}
           </p>
-          <button type="submit" className="btn-primary btn-log">
+          {finishing && <p className="form-note">Saving your workout… you can log this in a moment.</p>}
+          <button type="submit" className="btn-primary btn-log" disabled={finishing}>
             ⚔️ Log Exercise
           </button>
         </form>

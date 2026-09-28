@@ -120,3 +120,9 @@ h1.hub-player-name {
     animation: none;
   }
 }
+
+.form-note {
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}

@@ -58,6 +58,8 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
 
   const addEntry = useCallback(
     (entry: ExerciseEntry) => {
+      // The form disables itself while saving; a weigh-in added now would replace the one being saved.
+      if (finishingRef.current) throw new Error('Cannot add an exercise while the workout is being saved');
       const item: SessionItem = { id: newItemId(), entry };
       const next = addToSession(itemsRef.current, item, (i) => i.entry);
       setItems(next);
@@ -84,7 +86,10 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
       const result = await logWorkout(logged.map((i) => i.entry));
       // Remove exactly what was saved; the ids make this safe even if the list changed meanwhile.
       const saved = new Set(logged.map((i) => i.id));
-      setItems(itemsRef.current.filter((i) => !saved.has(i.id)));
+      const remaining = itemsRef.current.filter((i) => !saved.has(i.id));
+      setItems(remaining);
+      // Persist now, not in the next effect: a reload in between would restore (and re-log) a saved workout.
+      if (owner) saveSession(store, owner, remaining);
       if (result.levelUps.length > 0) setLevelUps(result.levelUps);
       return result;
     } catch (error) {
@@ -95,7 +100,7 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
       finishingRef.current = false;
       setFinishing(false);
     }
-  }, [logWorkout, setItems]);
+  }, [logWorkout, setItems, owner, store]);
 
   const closeLevelUps = useCallback(() => setLevelUps([]), []);
 

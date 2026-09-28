@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { usePlayer } from '@/app/playerContext';
 import type { SessionItem } from './schema';
@@ -13,10 +13,24 @@ export function WorkoutLayout() {
   const { save } = usePlayer();
   const [popup, setPopup] = useState<SessionItem | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  const announceFrame = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (announceFrame.current !== null) cancelAnimationFrame(announceFrame.current);
+    },
+    [],
+  );
 
   const showXpGain = useCallback((item: SessionItem, totalXp: number) => {
     setPopup(item);
-    setAnnouncement(`Added ${item.entry.name}, +${item.entry.xpGained} XP. Session total ${totalXp} XP.`);
+    // Clear, then set on the next frame, so identical text (e.g. a replaced 0 XP weigh-in) is announced again.
+    setAnnouncement('');
+    if (announceFrame.current !== null) cancelAnimationFrame(announceFrame.current);
+    const text = `Added ${item.entry.name}, +${item.entry.xpGained} XP. Session total ${totalXp} XP.`;
+    announceFrame.current = requestAnimationFrame(() => {
+      announceFrame.current = null;
+      setAnnouncement(text);
+    });
   }, []);
   const hidePopup = useCallback(() => setPopup(null), []);
   const feedback = useMemo<XpFeedback>(() => ({ showXpGain }), [showXpGain]);

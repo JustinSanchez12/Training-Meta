@@ -11,6 +11,25 @@ interface ModalOverlayProps {
   onClose(): void;
 }
 
+/** Open modals, bottom → top. Only the top one is interactive, handles Escape and owns the inert state. */
+const modalStack: HTMLElement[] = [];
+/** Elements this module made inert (anything inert for other reasons is left alone). */
+const madeInert = new Set<Element>();
+
+/** Makes everything except the top modal's host inert; with no modal open, restores what we changed. */
+function syncInert() {
+  madeInert.forEach((el) => el.removeAttribute('inert'));
+  madeInert.clear();
+  const top = modalStack[modalStack.length - 1];
+  if (!top) return;
+  for (const el of document.body.children) {
+    if (el !== top && !el.hasAttribute('inert')) {
+      el.setAttribute('inert', '');
+      madeInert.add(el);
+    }
+  }
+}
+
 /**
  * Full-screen RPG-styled modal (legacy .levelup-overlay look). Portaled to <body>; while open, everything else
  * is inert, focus starts on the action button and Tab can't leave the dialog. On close, focus returns to where
@@ -35,27 +54,38 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
       returnFocusTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     }
     document.body.appendChild(host);
-    const siblings = [...document.body.children].filter(
-      (el): el is HTMLElement => el !== host && el instanceof HTMLElement && !el.hasAttribute('inert'),
-    );
-    siblings.forEach((el) => el.setAttribute('inert', ''));
+    modalStack.push(host);
+    syncInert();
     // The portal only joins the document here, so autoFocus would be too early: focus explicitly.
     actionRef.current?.focus();
 
     return () => {
-      siblings.forEach((el) => el.removeAttribute('inert'));
+      const wasTop = modalStack[modalStack.length - 1] === host;
+      modalStack.splice(modalStack.indexOf(host), 1);
       host.remove();
-      restoreFocus(returnFocusTo.current ?? null);
+      syncInert();
+      // A modal closing underneath another must not pull focus out of the one still open.
+      if (!wasTop) return;
+      const returnTo = returnFocusTo.current ?? null;
+      // Deferred: when onClose navigates, this cleanup runs in the same commit that swaps screens, before the
+      // new screen's DOM exists. A microtask runs after that commit, so the fallback heading is the new one.
+      queueMicrotask(() => {
+        if (modalStack.length === 0) restoreFocus(returnTo);
+      });
     };
   }, [host]);
 
   useEffect(() => {
     function handleKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key === 'Escape' && !event.defaultPrevented && !event.isComposing) onClose();
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+      // Only the top modal closes, so one Escape never dismisses a stack of them.
+      if (modalStack[modalStack.length - 1] !== host) return;
+      event.preventDefault();
+      onClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, host]);
 
   function trapTab(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key !== 'Tab' || !dialogRef.current) return;
