@@ -13,6 +13,7 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+.playwright-mcp/
 supabase/.temp/
 supabase/.branches/
 .claude/settings.local.json

@@ -29,9 +29,10 @@ export function CharacterWizard() {
   const [error, setError] = useState<string | null>(null);
   const [createdName, setCreatedName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Checked once on arrival: the save we create below must not trigger this redirect before the overlay shows.
+  const [hadCharacterOnArrival] = useState(() => save !== null);
 
-  // Already have a character (and didn't just make one here)? Go to the Hub.
-  if (save && !createdName) return <Navigate to="/hub" replace />;
+  if (hadCharacterOnArrival) return <Navigate to="/hub" replace />;
 
   const totalSteps = STEP_FIELDS.length;
   const isLastStep = step === totalSteps - 1;
