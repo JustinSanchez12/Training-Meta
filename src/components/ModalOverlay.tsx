@@ -15,6 +15,8 @@ interface ModalOverlayProps {
 const modalStack: HTMLElement[] = [];
 /** Elements this module made inert (anything inert for other reasons is left alone). */
 const madeInert = new Set<Element>();
+/** A deferred focus restore from a modal that just closed; cancelled if another modal opens first. */
+let pendingRestore: number | null = null;
 
 /** Makes everything except the top modal's host inert; with no modal open, restores what we changed. */
 function syncInert() {
@@ -53,6 +55,10 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
     if (returnFocusTo.current === undefined) {
       returnFocusTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     }
+    if (pendingRestore !== null) {
+      cancelAnimationFrame(pendingRestore);
+      pendingRestore = null;
+    }
     document.body.appendChild(host);
     modalStack.push(host);
     syncInert();
@@ -69,7 +75,9 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
       const returnTo = returnFocusTo.current ?? null;
       // Deferred to the next frame: when onClose navigates, React Router commits the new screen in a transition
       // that can land after this cleanup (even after a microtask), so resolve the target once it has rendered.
-      requestAnimationFrame(() => {
+      if (pendingRestore !== null) cancelAnimationFrame(pendingRestore);
+      pendingRestore = requestAnimationFrame(() => {
+        pendingRestore = null;
         const top = modalStack[modalStack.length - 1];
         // Another modal is still open underneath: move focus into it rather than leaving it on <body>.
         if (top) top.querySelector<HTMLElement>('.levelup-dismiss')?.focus();

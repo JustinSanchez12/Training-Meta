@@ -53,5 +53,5 @@ No DB, migration or env changes. `src/features/workout/schema.ts`: `SessionItemS
 - [x] Add unit and e2e tests. Tick this checklist.
 
 ## Later slices
-- Slice 4 `feat/react-port-log-profile`: Quest Log, Profile plus a lose/gain/maintain weight goal, reset with confirm (a reset creates a new `createdAt`, so any leftover draft is discarded), delete `legacy/`.
+- Slice 4 `feat/react-port-log-profile`: Quest Log, Profile plus a lose/gain/maintain weight goal, reset with confirm (a reset creates a new `createdAt`, so any leftover draft is discarded), delete `legacy/`. When reset lands, make `finish()`'s synchronous draft write skip if the character changed during the save.
 - Supabase slice: a cloud `SaveRepository` with auth and RLS, multi-tab and multi-device conflicts, and whether drafts should sync.
