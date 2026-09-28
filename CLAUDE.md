@@ -13,11 +13,11 @@ See `README.md` for the game design and XP rules.
 | Hosting | Vercel (static build + serverless functions in `api/`) |
 | Unit tests | Vitest + React Testing Library |
 | E2E tests | Playwright |
-| Node | 20 LTS or newer (see `.nvmrc`) |
+| Node | 22.22+ or 24.15+ (see `.nvmrc`; Vitest 5 and jsdom require it) |
 
-> **Migration in progress:** the current app in `index.html`, `css/` and `js/` is legacy vanilla JS.
-> Porting it to React is the first `/new-feature`. Until then, run it with `npx serve .`.
-> Don't add features to the legacy files.
+> **Migration in progress:** the original vanilla-JS app is in `legacy/` (run it with `npm run legacy`).
+> Screens are being ported slice by slice. See "Later slices" in `docs/spec.md` or the latest spec PR.
+> Don't add features to `legacy/`. It gets deleted when the port is done.
 
 Optional AI layer: APE (`docs/ape-api.md`). Only call it from `api/`, never from the browser.
 

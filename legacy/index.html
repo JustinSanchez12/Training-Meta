@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>The Training Meta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q98010P7LZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q98010P7LZ');
+  </script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ==================== SCREEN: START ==================== -->
+    <div id="screen-start" class="screen active">
+      <div class="start-content">
+        <div class="start-emblem">⚔️</div>
+        <h1 class="start-title">The Training Meta</h1>
+        <p class="start-subtitle">Level Up Your Life</p>
+        <div class="start-decorative">━━━ ⚜ ━━━</div>
+        <button class="btn-start" onclick="navigateToCharacterCreation()">START</button>
+        <p class="start-footer">A fitness RPG experience</p>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN: CHARACTER CREATION ==================== -->
+    <div id="screen-character-creation" class="screen">
+      <div class="creation-container">
+        <h1 class="creation-title">⚔️ Create Your Character</h1>
+        <p class="creation-subtitle" id="creation-progress">Step 1 of 4</p>
+
+        <!-- Step 1: Name -->
+        <div class="creation-step active" data-step="0">
+          <div class="step-label">What is your name, adventurer?</div>
+          <input type="text" id="input-name" class="input-field" placeholder="Enter your name" maxlength="20" autocomplete="off">
+          <button class="btn-primary" id="btn-next-step-1">Continue →</button>
+        </div>
+
+        <!-- Step 2: Gender -->
+        <div class="creation-step" data-step="1">
+          <div class="step-label">Choose your identity</div>
+          <input type="hidden" id="selected-gender" value="">
+          <div class="gender-selector">
+            <button class="gender-btn" data-gender="male">
+              <span class="gender-icon">🧙‍♂️</span>
+              <span>Male</span>
+            </button>
+            <button class="gender-btn" data-gender="female">
+              <span class="gender-icon">🧙‍♀️</span>
+              <span>Female</span>
+            </button>
+            <button class="gender-btn" data-gender="unspecified">
+              <span class="gender-icon">🧙</span>
+              <span>Prefer Not to Say</span>
+            </button>
+          </div>
+          <button class="btn-primary" id="btn-next-step-2">Continue →</button>
+        </div>
+
+        <!-- Step 3: Age -->
+        <div class="creation-step" data-step="2">
+          <div class="step-label">How old are you?</div>
+          <input type="number" id="input-age" class="input-field" placeholder="Enter your age" min="1" max="120" inputmode="numeric">
+          <button class="btn-primary" id="btn-next-step-3">Continue →</button>
+        </div>
+
+        <!-- Step 4: Weight -->
+        <div class="creation-step" data-step="3">
+          <div class="step-label">Starting weight</div>
+          <div class="weight-input-group">
+            <input type="number" id="input-weight" class="input-field" placeholder="Enter weight" min="1" step="0.1" inputmode="decimal">
+            <select id="input-weight-unit" class="input-select">
+              <option value="lbs">lbs</option>
+              <option value="kg">kg</option>
+            </select>
+          </div>
+          <button class="btn-primary btn-create" id="btn-create-character">⚔️ Create Character</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN: HUB (DASHBOARD) ==================== -->
+    <div id="screen-hub" class="screen">
+      <div class="hub-header">
+        <div class="hub-player-info">
+          <div class="hub-avatar">⚔️</div>
+          <div>
+            <div class="hub-player-name" id="hub-player-name">Player</div>
+            <div class="hub-player-level" id="hub-player-level">Level 1</div>
+          </div>
+        </div>
+        <div class="hub-meta">
+          <span id="hub-total-level">Total Level: 12</span>
+          <span id="hub-streak">🔥 0 day streak</span>
+        </div>
+      </div>
+
+      <div class="hub-panels">
+        <button class="hub-panel" onclick="navigateToStats()">
+          <span class="panel-icon">📊</span>
+          <span class="panel-title">Stats</span>
+          <span class="panel-desc">View your skills</span>
+        </button>
+        <button class="hub-panel" onclick="navigateToWorkout()">
+          <span class="panel-icon">🏋️</span>
+          <span class="panel-title">Log Workout</span>
+          <span class="panel-desc">Train & earn XP</span>
+        </button>
+        <button class="hub-panel" onclick="navigateToProgress()">
+          <span class="panel-icon">📜</span>
+          <span class="panel-title">Quest Log</span>
+          <span class="panel-desc">Workout history</span>
+        </button>
+        <button class="hub-panel" onclick="navigateToProfile()">
+          <span class="panel-icon">👤</span>
+          <span class="panel-title">Profile</span>
+          <span class="panel-desc">Your character</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN: STATS ==================== -->
+    <div id="screen-stats" class="screen">
+      <div class="screen-header">
+        <button class="back-btn" onclick="navigateToHub()">← Hub</button>
+        <h2>⚔️ Stats</h2>
+        <span class="header-meta" id="stats-total-level">Total Level: 12</span>
+      </div>
+      <div class="stats-grid-container">
+        <div id="stats-grid" class="stats-grid"></div>
+      </div>
+      <div id="stat-detail-panel" class="stat-detail-panel"></div>
+    </div>
+
+    <!-- ==================== SCREEN: WORKOUT ==================== -->
+    <div id="screen-workout" class="screen">
+      <div class="screen-header">
+        <button class="back-btn" onclick="navigateToHub()">← Hub</button>
+        <h2>🏋️ Log Workout</h2>
+      </div>
+      <div class="workout-content">
+        <div class="workout-section">
+          <h3>Choose Exercise</h3>
+          <div id="exercise-selector"></div>
+        </div>
+        <div class="workout-section">
+          <h3>Current Session</h3>
+          <div id="session-exercises"></div>
+          <div class="session-footer">
+            <span id="session-total-xp" class="session-total">Total: +0 XP (0 exercises)</span>
+            <button class="btn-primary btn-finish" onclick="finishWorkout()">✅ Finish Workout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SCREEN: EXERCISE FORM ==================== -->
+    <div id="screen-exercise-form" class="screen">
+      <div id="exercise-form-container" class="exercise-form-wrapper"></div>
+    </div>
+
+    <!-- ==================== SCREEN: PROGRESS ==================== -->
+    <div id="screen-progress" class="screen">
+      <div class="screen-header">
+        <button class="back-btn" onclick="navigateToHub()">← Hub</button>
+        <h2>📜 Quest Log</h2>
+      </div>
+      <div id="progress-log" class="progress-log"></div>
+    </div>
+
+    <!-- ==================== SCREEN: PROFILE ==================== -->
+    <div id="screen-profile" class="screen">
+      <div class="screen-header">
+        <button class="back-btn" onclick="navigateToHub()">← Hub</button>
+        <h2>👤 Profile</h2>
+      </div>
+      <div id="profile-content" class="profile-content"></div>
+    </div>
+
+  </div>
+
+  <!-- JS Modules (order matters) -->
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/workout.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

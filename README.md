@@ -21,25 +21,35 @@ The player will achieve complete satisfactory because the character they play is
 - **Exponential XP Curve** — levels 1–99 with increasing XP requirements
 - **XP Gain Animations** — visual feedback when you earn XP
 - **Level Up Celebrations** — overlay animation when you level up a stat
-- **Persistent Cloud Storage** — APE Structured Memories saves your progress
+- **Saved Progress** — stored in your browser for now (cloud sync via Supabase is planned)
 - **Mobile-First Design** — optimized for phone-sized screens
 - **RPG Themed UI** — dark theme with gold accents and medieval typography
 
 ## Tech Stack
 
-- HTML, CSS, JavaScript (vanilla)
-- APE Platform (Authentication + JSON Storage)
+- React 18 + TypeScript + Vite
+- Zod for validation
+- Vitest + React Testing Library (unit), Playwright (e2e)
+- Hosting: Vercel · Data: localStorage for now, Supabase planned
 - Google Fonts (MedievalSharp, Inter)
+
+> The original vanilla-JS app lives in `legacy/` until the port is finished. Run it with `npm run legacy`.
 
 ## Getting Started
 
+Requires Node 22.22+ or 24.15+ (see `.nvmrc`).
 
-1. Serve the app locally:
-   ```bash
-   npx serve
-   ```
-2. Open the provided local URL in Chrome
-3. Create your character and start training!
+```bash
+npm install
+npm run dev          # http://localhost:5173
+```
+
+| Task | Command |
+|------|---------|
+| Unit tests | `npm test` |
+| E2E tests | `npx playwright install chromium` (once), then `npm run test:e2e` |
+| Typecheck / lint | `npm run typecheck` · `npm run lint` |
+| Production build | `npm run build` |
 
 ## Stats
 
