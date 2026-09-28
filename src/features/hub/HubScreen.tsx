@@ -12,7 +12,7 @@ interface Panel {
 
 const PANELS: Panel[] = [
   { icon: '📊', title: 'Stats', desc: 'View your skills', to: '/stats' },
-  { icon: '🏋️', title: 'Log Workout', desc: 'Train & earn XP' },
+  { icon: '🏋️', title: 'Log Workout', desc: 'Train & earn XP', to: '/workout' },
   { icon: '📜', title: 'Quest Log', desc: 'Workout history' },
   { icon: '👤', title: 'Profile', desc: 'Your character' },
 ];

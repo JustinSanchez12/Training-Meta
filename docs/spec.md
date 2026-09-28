@@ -1,56 +1,67 @@
-# Spec: React port, slice 2 (Stats grid and stat detail panel)
-Branch: feat/react-port-stats
+# Spec: React port, slice 3a (Log Workout: session, exercise forms, finish)
+Branch: feat/react-port-workout
 
 ## Goal
-From the Hub, a player can open the Stats screen and see all 12 stats with their level and progress. Tapping a stat opens a detail panel with its level, XP progress, total XP, category and XP rule. The screen is read-only and behaves like legacy `#screen-stats`.
+From the Hub, a player can build a workout session from the 12 exercises, log each one through a validated per-type form, and finish the session. Finishing awards XP, updates levels, the streak and the workout log, and saves. This ports legacy `#screen-workout` and `#screen-exercise-form` and fixes the Weight, UTC-date and float-XP bugs.
 
 ## Scope
-- In: `/stats` route with a guard (no save sends you to `/`). The Hub "Stats" panel is enabled and links to it; the other three panels stay "Coming soon". The screen has a header ("← Hub", "⚔️ Stats", "Total Level: N"), a 3-column grid in `STAT_ORDER`, the detail panel, and pure display helpers with unit tests.
-- Out: Workout logging, XP gain, Quest Log, Profile (slices 3–4). No data, schema or storage changes.
+- In: routes `/workout` and `/workout/:stat`, both guarded (no save sends you to `/`). The Hub "Log Workout" panel is enabled. Adds per-type input schemas, pure game logic in `lib/game/workout.ts`, the `logWorkout` provider action, and an inline empty-session error.
+- Out (3b): the XP-gain popup, the level-up overlay, and keeping the session across a reload. Out (slice 4): Quest Log and Profile.
 - Decisions:
-  - Detail panel state is local (`selectedStat: StatKey | null`), not a URL param, as in legacy. It renders as `.stat-detail-panel.active` using the existing CSS.
-  - Cells are `<button type="button" className="stat-cell">` (legacy used divs) with the accessible name "<Name>, level N". Button resets go in `src/app/port.css`, so `styles.css` stays identical to legacy.
-  - The panel is `role="dialog"` with `aria-labelledby` set to its `h2`. "← Back" and Escape both close it. Focus moves to Back on open and returns to the cell on close.
-  - Fill width is `progress × 100%`, and 100% at MAX_LEVEL. At max level the detail shows "MAX LEVEL" instead of "x / y XP".
-  - XP is floored for display, because legacy saves can hold float XP. Levels still come from the raw XP.
-  - Category is capitalised for display ("Strength"). Legacy showed the raw lowercase key.
+  - **Routing:** `/workout` shows the selector and the session. `/workout/:stat` shows the form. `:stat` is parsed with `StatKeySchema.safeParse`, and an invalid value redirects to `/workout`. Session state lives in a `WorkoutLayout` parent route (`useState` + `<Outlet context>`), so it survives moving between the two routes. Like legacy, it is memory only and a reload clears it.
+  - **Weight (owner decision: loss only, one weigh-in per session):**
+    - The form takes `currentWeight` in `player.weightUnit`.
+    - `change = player.currentWeight - currentWeight`, compared with the last saved weight.
+    - XP is 10 if the change is at least 0.5 lb (1 kg = 2.20462 lb), otherwise 0. Saved data is `{ currentWeight, change }`.
+    - Logging Weight again in the same session **replaces** the earlier weigh-in, so at most one earns XP and typos can be corrected.
+    - On finish, `player.currentWeight` becomes the logged weight. A lose/gain/maintain goal is planned for slice 4.
+  - **Streak dates:** use local dates via `toLocalIsoDate(now)`. "Yesterday" is `new Date(y, m, d - 1)`, which is DST-safe. If the saved `lastWorkoutDate` is later than today (an old UTC save), the streak and date are left unchanged. `WorkoutEntry.date` is local; timestamps stay UTC ISO.
+  - **Float XP:** every gain is rounded to 1 decimal (`Math.round(x * 10) / 10`). `totalXp` is the rounded sum.
+  - **Save strictness:** `ExerciseEntrySchema.data` stays loose, because legacy saves hold `{currentWeight}`-only data, nulls and strings. New entries are validated by the input schemas before they enter the session.
+  - **Empty finish:** the legacy `alert()` becomes an inline `role="alert"` message: "Add at least one exercise before finishing!". If saving fails, show "Couldn't save your workout. Try again." and keep the session.
 
 ## Data
-None. Reads `save.stats` from `usePlayer()`. New helper `src/features/stats/statView.ts`:
-`getStatView(key, stat) → { key, name, icon, level, fillPercent, isMax, xpText, totalXp, categoryLabel, xpRule }`.
+No DB, migration or env changes. New `src/lib/game/exercise.ts` with Zod input schemas (form strings through `z.coerce.number()`):
+- reps: sets int 1–100, reps int 1–1000, weight 0–2000 (optional)
+- distance: distance 0.1–200
+- laps: laps int 1–1000
+- session: sessions int 1–20, duration int 1–1440 (optional)
+- weight: currentWeight 20–1500
+- meal: meals int 1–10, description trimmed, max 200, optional
 
 ## UI / flow
-1. On `/hub`, the Stats panel is enabled ("View your skills") and goes to `/stats`.
-2. `/stats` shows the header with Total Level and 12 cells (icon, name, level, XP bar).
-3. Tapping a cell opens the detail panel: the icon and name, Level, a large XP bar and text, and the Total XP, Category and XP Rule rows.
-4. "← Back" or Escape closes the panel. "← Hub" returns to `/hub`.
-5. `/stats` with no save redirects to `/`.
+1. Hub → "Log Workout" (enabled, "Train & earn XP") → `/workout`.
+2. `/workout` shows "← Hub", "🏋️ Log Workout", the exercise buttons grouped by category, "Current Session" (an empty message or the entries, each with ✕), "Total: +N XP (M exercises)" and "✅ Finish Workout".
+3. Tapping an exercise opens `/workout/:stat`: "← Back", the icon and name, the XP rule, the fields, and "⚔️ Log Exercise". Invalid input shows inline errors.
+4. A valid submit adds the entry and returns to `/workout`. ✕ ("Remove <Name>") removes an entry.
+5. Finish with an empty session shows the inline error. Otherwise it applies the workout, saves, clears the session and goes to `/hub`.
 
 ## Acceptance criteria
-- [x] `getStatView` for 0 XP: level 1, fillPercent 0, xpText "0 / 20 XP".
-- [x] benchPress at 30 XP: level 2, "10 / 13 XP", fillPercent ≈ 76.9.
-- [x] Float XP 3.0000000000000004: "3 / 20 XP", totalXp 3.
-- [x] 11573 XP or more: isMax, fillPercent 100, "MAX LEVEL".
-- [x] categoryLabel "Cardio" for mileRun, and xpRule from `STAT_DEFINITIONS`.
-- [x] StatsScreen renders 12 cell buttons in `STAT_ORDER` and the correct Total Level.
-- [x] Clicking a cell opens a dialog with that stat's details. Back and Escape each close it.
-- [x] The Hub Stats panel is enabled and links to `/stats`. The other three panels are still disabled.
-- [x] `/stats` with no save redirects to `/`.
-- [x] E2E: seeded save → Hub → Stats → Bench Press level 2 and Total Level 13 → open Bench Press → "10 / 13 XP", "Strength" and "sets × reps = XP" → Back → ← Hub.
+- [x] `calculateXpGain`: bench 3×10 = 30. mileRun 0.3 = 3. cycling 0.3 = 1.5. swimming 4 = 20. yoga 2 = 20. meal 3 = 15.
+- [x] Weight: 180 lb → 179.5 = 10 XP, 179.8 = 0, 181 = 0. 80 kg → 79.7 kg = 10 XP.
+- [x] A second Weight entry in a session replaces the first.
+- [x] Input schemas reject 0 sets, 101 sets, 1.5 reps, 0.05 miles, NaN and empty required fields. They accept a missing lift weight or meal description.
+- [x] `updateStreak`: same day leaves it unchanged. Local yesterday adds 1. A gap resets to 1. `''` becomes 1. A future date is left unchanged. 23:30 local time counts as today.
+- [x] `applyWorkout(save, exercises, now)` returns a new save without mutating the input. It adds XP and levels, prepends the entry, updates `currentWeight`, and returns `levelUps[]`.
+- [x] Legacy saves with `{currentWeight}`-only or null data still load.
+- [x] `/workout/notAStat` redirects to `/workout`. `/workout` and `/workout/squat` with no save redirect to `/`.
+- [x] Finishing an empty session shows the inline alert, and nothing is saved.
+- [x] The Hub Log Workout panel is enabled. Quest Log and Profile stay disabled.
+- [x] E2E: seeded save → Log Workout → Bench 3×10 + Mile Run 0.3 → +33 XP → Finish → Hub shows a 1-day streak → Stats shows Bench Press level up.
 
 ## Tests
-- Unit: `tests/unit/features/stats/statView.test.ts`, `tests/unit/features/stats/StatsScreen.test.tsx`, `tests/unit/features/hub/HubScreen.test.tsx`.
-- E2E: `tests/e2e/stats.spec.ts`. Seed `legacySave()` via `page.addInitScript`. Add a second test: `/stats` with no save redirects to Start.
+- Unit: `tests/unit/lib/game/workout.test.ts`, `tests/unit/lib/game/exercise.test.ts`, `tests/unit/features/workout/*.test.tsx`, `tests/unit/app/PlayerProvider.test.tsx` (logWorkout), an update to `HubScreen.test.tsx`.
+- E2E: `tests/e2e/workout.spec.ts` (happy path `@smoke` + empty finish).
 
 ## Tasks
-- [x] Add `src/features/stats/statView.ts`.
-- [x] Add `src/features/stats/StatDetailPanel.tsx` (dialog, Back, Escape, focus).
-- [x] Add `src/features/stats/StatsScreen.tsx` (guard, header, grid, selected state).
-- [x] Register `/stats` in `src/app/App.tsx`.
-- [x] Enable the Stats panel in `src/features/hub/HubScreen.tsx`.
-- [x] Add button resets for `.stat-cell` in `src/app/port.css`.
+- [x] Add `lib/game/exercise.ts` (input schemas) and update the `ExerciseEntrySchema` comment and types.
+- [x] Add `lib/game/workout.ts` (`calculateXpGain`, `buildExerciseEntry`, `formatExerciseData`, `toLocalIsoDate`, `updateStreak`, `applyWorkout`).
+- [x] Add `logWorkout` to `playerContext.ts` and `PlayerProvider.tsx`.
+- [x] Add `features/workout/` (`WorkoutLayout`, `WorkoutScreen`, `ExerciseForm`, `SessionList`).
+- [x] Register the nested routes in `App.tsx`. Enable the Hub panel.
+- [x] Add any button resets to `src/app/port.css` only.
 - [x] Add unit and e2e tests. Tick this checklist.
 
-## Later slices (not in this PR)
-- Slice 3 `feat/react-port-workout`: workout logging, XP gain, level-up overlay, streak, and per-type exercise schemas. Fix the legacy bug where the Weight form sends `currentWeight` but XP reads `change`, so Weight never earns XP. Decide whether streak dates use local time or UTC.
-- Slice 4 `feat/react-port-log-profile`: Quest Log, Profile, reset with confirm. Delete `legacy/`.
+## Later slices
+- 3b `feat/react-port-workout-feedback`: the XP-gain popup on log, the level-up overlay after finishing (using `levelUps`), and possibly keeping the session in `sessionStorage` (Zod-validated).
+- Slice 4 `feat/react-port-log-profile`: Quest Log, Profile (plus a lose/gain/maintain weight goal), reset with confirm. Delete `legacy/`.

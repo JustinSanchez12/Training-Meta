@@ -3,6 +3,9 @@ import { CharacterWizard } from '@/features/character/CharacterWizard';
 import { HubScreen } from '@/features/hub/HubScreen';
 import { StartScreen } from '@/features/start/StartScreen';
 import { StatsScreen } from '@/features/stats/StatsScreen';
+import { ExerciseForm } from '@/features/workout/ExerciseForm';
+import { WorkoutLayout } from '@/features/workout/WorkoutLayout';
+import { WorkoutScreen } from '@/features/workout/WorkoutScreen';
 import { usePlayer } from './playerContext';
 
 function AppRoutes() {
@@ -16,6 +19,10 @@ function AppRoutes() {
       <Route path="/create" element={<CharacterWizard />} />
       <Route path="/hub" element={<HubScreen />} />
       <Route path="/stats" element={<StatsScreen />} />
+      <Route path="/workout" element={<WorkoutLayout />}>
+        <Route index element={<WorkoutScreen />} />
+        <Route path=":stat" element={<ExerciseForm />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -65,7 +65,7 @@ npm run dev          # http://localhost:5173
 | Cycling | Cardio | 1 mile = 5 XP |
 | Swimming | Cardio | 1 lap = 5 XP |
 | Yoga | Flexibility | 1 session = 10 XP |
-| Weight | Body | 0.5–1 lb = 10 XP |
+| Weight | Body | lose 0.5+ lb since last weigh-in = 10 XP |
 | Nutrition | Body | 1 meal = 5 XP |
 
 Protohub fullscreen deployment: true
