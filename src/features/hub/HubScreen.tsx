@@ -31,7 +31,9 @@ export function HubScreen() {
             ⚔️
           </div>
           <div>
-            <div className="hub-player-name">{player.name}</div>
+            <h1 className="hub-player-name" tabIndex={-1}>
+              {player.name}
+            </h1>
             <div className="hub-player-level">Level {getOverallLevel(stats)}</div>
           </div>
         </div>

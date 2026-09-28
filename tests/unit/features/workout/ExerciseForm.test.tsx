@@ -1,10 +1,16 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { SaveData } from '@/lib/game/schema';
 import { legacySave } from '../../fixtures/saves';
 import { createMemoryRepository, location, renderWorkout } from './renderWorkout';
 
 const logButton = () => screen.getByRole('button', { name: /log exercise/i });
+/** The form's own error summary; WorkoutLayout also has a status region (the XP announcement). */
+const formStatus = () => {
+  const form = logButton().closest('form');
+  if (!form) throw new Error('form not found');
+  return within(form).getByRole('status');
+};
 
 function kgSave(): SaveData {
   const save = legacySave();
@@ -66,13 +72,13 @@ describe('ExerciseForm', () => {
     const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
     const sets = await screen.findByLabelText(/^sets/i);
     await user.click(logButton());
-    expect(screen.getByRole('status')).toHaveTextContent('2 fields need fixing.');
+    expect(formStatus()).toHaveTextContent('2 fields need fixing.');
 
     await user.type(screen.getByLabelText(/^reps/i), '5');
     sets.focus();
     await user.keyboard('{Enter}');
     expect(sets).toHaveFocus();
-    expect(screen.getByRole('status')).toHaveTextContent('1 field needs fixing.');
+    expect(formStatus()).toHaveTextContent('1 field needs fixing.');
   });
 
   it('describes each invalid field by its error (no alerts) and focuses the first invalid field', async () => {
@@ -145,6 +151,22 @@ describe('ExerciseForm', () => {
     await user.click(logButton());
     expect(await screen.findByText('Total: +30 XP (1 exercise)')).toBeInTheDocument();
     expect(location()).toHaveTextContent(/^\/workout$/);
+  });
+
+  it('shows the +XP popup and announces the gain after logging', async () => {
+    const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
+    await user.type(await screen.findByLabelText(/^sets/i), '3');
+    await user.type(screen.getByLabelText(/^reps/i), '10');
+    await user.click(logButton());
+    expect(await screen.findByText('Total: +30 XP (1 exercise)')).toBeInTheDocument();
+    // The popup is decorative (aria-hidden); the status region carries the announcement.
+    const popup = document.querySelector('.xp-popup');
+    expect(popup).toHaveTextContent('+30 XPBench Press');
+    expect(popup).toHaveAttribute('aria-hidden', 'true');
+    // Set on the next animation frame (cleared first so identical text is re-announced).
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Added Bench Press, +30 XP. Session total 30 XP.'),
+    );
   });
 
   it('awards Weight XP for a 0.3 kg loss in kg', async () => {

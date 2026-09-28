@@ -132,6 +132,34 @@ describe('addToSession', () => {
   });
 });
 
+describe('addToSession with wrapped items', () => {
+  interface Wrapped {
+    id: string;
+    entry: ExerciseEntry;
+  }
+  const wrap = (id: string, e: ExerciseEntry): Wrapped => ({ id, entry: e });
+  const entryOf = (item: Wrapped) => item.entry;
+
+  it('appends without mutating, keeping the wrapper objects', () => {
+    const first = wrap('a', entry('benchPress', { sets: 3, reps: 10 }));
+    const session: Wrapped[] = [first];
+    const second = wrap('b', entry('benchPress', { sets: 3, reps: 10 }));
+    const next = addToSession(session, second, entryOf);
+    expect(next).toEqual([first, second]);
+    expect(next[0]).toBe(first);
+    expect(next[1]).toBe(second);
+    expect(session).toHaveLength(1);
+  });
+
+  it('replaces an earlier weigh-in, judged by the wrapped entry', () => {
+    let session: Wrapped[] = [];
+    session = addToSession(session, wrap('w1', entry('weight', { currentWeight: 170 })), entryOf);
+    session = addToSession(session, wrap('b', entry('benchPress', { sets: 3, reps: 10 })), entryOf);
+    session = addToSession(session, wrap('w2', entry('weight', { currentWeight: 179.5 })), entryOf);
+    expect(session.map((i) => i.id)).toEqual(['b', 'w2']);
+  });
+});
+
 describe('formatExerciseData', () => {
   it('formats each XP type', () => {
     expect(formatExerciseData('benchPress', { sets: 3, reps: 10, weight: 135 })).toBe('3×10 @ 135 lbs');

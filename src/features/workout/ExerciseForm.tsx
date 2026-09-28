@@ -1,23 +1,27 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { usePlayer } from '@/app/playerContext';
 import { EXERCISE_INPUT_SCHEMAS, type ExerciseInput } from '@/lib/game/exercise';
-import { StatKeySchema } from '@/lib/game/schema';
+import { StatKeySchema, type SaveData } from '@/lib/game/schema';
 import { STAT_DEFINITIONS, type StatKey } from '@/lib/game/stats';
 import { buildExerciseEntry } from '@/lib/game/workout';
 import { getExerciseFields } from './fields';
-import { useWorkoutSession } from './sessionContext';
+import { useWorkoutSession, useXpFeedback } from './sessionContext';
 
 /** /workout/:stat: the URL param is validated with Zod; anything that isn't a stat goes back to /workout. */
 export function ExerciseForm() {
+  const { save } = usePlayer();
   const parsed = StatKeySchema.safeParse(useParams().stat);
   if (!parsed.success) return <Navigate to="/workout" replace />;
+  if (!save) return null; // WorkoutLayout redirects when there's no save.
   // Keyed so switching stats resets the form state.
-  return <ExerciseFormFields key={parsed.data} stat={parsed.data} />;
+  return <ExerciseFormFields key={parsed.data} stat={parsed.data} save={save} />;
 }
 
-function ExerciseFormFields({ stat }: { stat: StatKey }) {
-  const { save, addEntry } = useWorkoutSession();
+function ExerciseFormFields({ stat, save }: { stat: StatKey; save: SaveData }) {
+  const { addEntry, finishing } = useWorkoutSession();
+  const { showXpGain } = useXpFeedback();
   const navigate = useNavigate();
   const def = STAT_DEFINITIONS[stat];
   const unit = save.player.weightUnit;
@@ -50,7 +54,10 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
     }
 
     const input: ExerciseInput = result.data;
-    addEntry(buildExerciseEntry(stat, input, { previousWeight: save.player.currentWeight, weightUnit: unit }));
+    const { item, totalXp } = addEntry(
+      buildExerciseEntry(stat, input, { previousWeight: save.player.currentWeight, weightUnit: unit }),
+    );
+    showXpGain(item, totalXp);
     navigate('/workout');
   }
 
@@ -117,7 +124,8 @@ function ExerciseFormFields({ stat }: { stat: StatKey }) {
           <p className="visually-hidden" role="status" aria-live="polite">
             {errorSummary}
           </p>
-          <button type="submit" className="btn-primary btn-log">
+          {finishing && <p className="form-note">Saving your workout… you can log this in a moment.</p>}
+          <button type="submit" className="btn-primary btn-log" disabled={finishing}>
             ⚔️ Log Exercise
           </button>
         </form>

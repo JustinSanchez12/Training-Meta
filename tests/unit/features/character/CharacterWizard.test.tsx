@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
 import { usePlayer } from '@/app/playerContext';
 import { CharacterWizard } from '@/features/character/CharacterWizard';
+import { HubScreen } from '@/features/hub/HubScreen';
 import type { SaveData } from '@/lib/game/schema';
 import type { SaveRepository } from '@/lib/storage';
 import { legacySave } from '../../fixtures/saves';
@@ -33,7 +34,7 @@ function LocationProbe() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderWizard(repository: SaveRepository) {
+function renderWizard(repository: SaveRepository, hub: ReactNode = <h1>Hub stub</h1>) {
   const user = userEvent.setup();
   render(
     <PlayerProvider repository={repository}>
@@ -41,7 +42,7 @@ function renderWizard(repository: SaveRepository) {
         <WaitForLoad>
           <Routes>
             <Route path="/create" element={<CharacterWizard />} />
-            <Route path="/hub" element={<h1>Hub stub</h1>} />
+            <Route path="/hub" element={hub} />
           </Routes>
           <LocationProbe />
         </WaitForLoad>
@@ -174,6 +175,60 @@ describe('CharacterWizard', () => {
     await user.click(await screen.findByRole('button', { name: /enter the hub/i }));
     expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/hub');
+  });
+
+  it('the overlay is a modal dialog that focuses "Enter the Hub" and traps Tab', async () => {
+    const user = renderWizard(createMemoryRepository());
+    await completeSteps(user);
+    await user.click(screen.getByRole('button', { name: /create character/i }));
+    const dialog = await screen.findByRole('dialog', { name: '⚔️ CHARACTER CREATED ⚔️' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    const enter = screen.getByRole('button', { name: /enter the hub/i });
+    expect(enter).toHaveFocus();
+    await user.tab();
+    expect(enter).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(enter).toHaveFocus();
+  });
+
+  it('goes to the Hub when Escape is pressed on the overlay', async () => {
+    const user = renderWizard(createMemoryRepository());
+    await completeSteps(user);
+    await user.click(screen.getByRole('button', { name: /create character/i }));
+    await screen.findByRole('dialog');
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/hub');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[inert]')).toHaveLength(0);
+  });
+
+  describe('focus after leaving the overlay for the real Hub', () => {
+    async function createAndOpenOverlay() {
+      const user = renderWizard(createMemoryRepository(), <HubScreen />);
+      await completeSteps(user);
+      await user.click(screen.getByRole('button', { name: /create character/i }));
+      await screen.findByRole('dialog', { name: '⚔️ CHARACTER CREATED ⚔️' });
+      return user;
+    }
+
+    it('"Enter the Hub" lands focus on the Hub h1, not <body>', async () => {
+      const user = await createAndOpenOverlay();
+      await user.click(screen.getByRole('button', { name: /enter the hub/i }));
+      const heading = await screen.findByRole('heading', { level: 1, name: 'Aragorn' });
+      await waitFor(() => expect(heading).toHaveFocus());
+      expect(document.body).not.toHaveFocus();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(document.querySelectorAll('[inert]')).toHaveLength(0);
+    });
+
+    it('Escape lands focus on the Hub h1, not <body>', async () => {
+      const user = await createAndOpenOverlay();
+      await user.keyboard('{Escape}');
+      const heading = await screen.findByRole('heading', { level: 1, name: 'Aragorn' });
+      await waitFor(() => expect(heading).toHaveFocus());
+      expect(screen.getByTestId('location')).toHaveTextContent('/hub');
+    });
   });
 
   it('shows an error and no overlay when saving fails', async () => {

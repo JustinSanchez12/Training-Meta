@@ -1,15 +1,25 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SESSION_KEY } from '@/features/workout/sessionStorage';
 import { STAT_DEFINITIONS, STAT_ORDER } from '@/lib/game/stats';
 import { legacySave } from '../../fixtures/saves';
-import { createMemoryRepository, location, logExercise, renderWorkout } from './renderWorkout';
+import { createMemoryRepository, goTo, location, logExercise, pendingSave, renderWorkout } from './renderWorkout';
 
 const finishButton = () => screen.getByRole('button', { name: /finish workout/i });
 const sessionSection = () => screen.getByRole('region', { name: /current session/i });
+const exerciseButtons = () => within(screen.getByRole('region', { name: /choose exercise/i })).getAllByRole('button');
+const removeButtons = () => screen.getAllByRole('button', { name: /^Remove / });
+const LEVEL_UP = '⚔️ LEVEL UP! ⚔️';
+
+interface StoredShape {
+  items: { id: string; entry: { name: string; timestamp: string } }[];
+}
+const storedSession = () => JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as StoredShape | null;
 
 describe('WorkoutScreen', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('shows the header, a Hub link, all 12 exercises by category and an empty session', async () => {
@@ -20,8 +30,7 @@ describe('WorkoutScreen', () => {
     for (const category of ['Strength', 'Cardio', 'Flexibility', 'Body']) {
       expect(screen.getByRole('heading', { name: category })).toBeInTheDocument();
     }
-    const chooser = screen.getByRole('region', { name: /choose exercise/i });
-    const buttons = within(chooser).getAllByRole('button');
+    const buttons = exerciseButtons();
     expect(buttons.map((b) => b.textContent)).toEqual(
       STAT_ORDER.map((key) => `${STAT_DEFINITIONS[key].icon}${STAT_DEFINITIONS[key].name}`),
     );
@@ -56,6 +65,19 @@ describe('WorkoutScreen', () => {
     expect(within(session).getByText('+30 XP')).toBeInTheDocument();
     expect(within(session).getByText('+3 XP')).toBeInTheDocument();
     expect(screen.getByText('Total: +33 XP (2 exercises)')).toBeInTheDocument();
+    // The layout's status region announces the latest gain and the running total.
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Added Mile Run, +3 XP. Session total 33 XP.'),
+    );
+  });
+
+  it('keeps the session when leaving /workout for another screen and coming back', async () => {
+    const user = renderWorkout(createMemoryRepository(legacySave()));
+    await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+    await goTo(user, 'Stats');
+    await screen.findByRole('heading', { name: 'Stats stub' });
+    await goTo(user, 'Workout');
+    expect(await screen.findByText('Total: +30 XP (1 exercise)')).toBeInTheDocument();
   });
 
   it('removes an entry with its ✕ button and moves focus sensibly', async () => {
@@ -69,11 +91,32 @@ describe('WorkoutScreen', () => {
     const swimming = screen.getByRole('button', { name: 'Remove Swimming, 4 laps' });
     expect(swimming).toHaveFocus();
     expect(screen.getByText('Total: +20 XP (1 exercise)')).toBeInTheDocument();
+    expect(storedSession()?.items.map((i) => i.entry.name)).toEqual(['Swimming']);
 
     await user.click(swimming);
     const empty = within(sessionSection()).getByText(/no exercises added yet/i);
     expect(empty).toHaveFocus();
     expect(screen.getByText('Total: +0 XP (0 exercises)')).toBeInTheDocument();
+    // An empty session removes the key.
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+  });
+
+  it('removes two entries with identical timestamps independently', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-28T12:00:00.000Z') });
+    const user = renderWorkout(createMemoryRepository(legacySave()));
+    await logExercise(user, 'Squat', { '^sets': '1', '^reps': '5' });
+    await logExercise(user, 'Squat', { '^sets': '1', '^reps': '5' });
+    const stored = storedSession();
+    expect(stored?.items).toHaveLength(2);
+    expect(stored?.items[0]?.entry.timestamp).toBe(stored?.items[1]?.entry.timestamp);
+    expect(stored?.items[0]?.id).not.toBe(stored?.items[1]?.id);
+
+    const twins = screen.getAllByRole('button', { name: 'Remove Squat, 1×5 @ — lbs' });
+    expect(twins).toHaveLength(2);
+    await user.click(twins[0]!);
+    expect(screen.getAllByRole('button', { name: 'Remove Squat, 1×5 @ — lbs' })).toHaveLength(1);
+    expect(screen.getByText('Total: +5 XP (1 exercise)')).toBeInTheDocument();
+    expect(storedSession()?.items.map((i) => i.id)).toEqual([stored?.items[1]?.id]);
   });
 
   it('replaces an earlier weigh-in when Weight is logged twice', async () => {
@@ -95,12 +138,21 @@ describe('WorkoutScreen', () => {
     expect(location()).toHaveTextContent(/^\/workout$/);
   });
 
-  it('finishes: saves XP, streak and weight, clears the session and goes to the Hub', async () => {
+  it('clears the empty-session alert once an exercise is added', async () => {
+    const user = renderWorkout(createMemoryRepository(legacySave()));
+    await user.click(await screen.findByRole('button', { name: /finish workout/i }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await logExercise(user, 'Swimming', { laps: '1' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('finishes: saves XP, streak and weight, clears the session, goes to the Hub and shows the level-ups', async () => {
     const repo = createMemoryRepository(legacySave());
     const user = renderWorkout(repo);
     await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
     await logExercise(user, 'Mile Run', { distance: '0.3' });
     await logExercise(user, 'Weight', { 'current weight': '178' });
+    expect(storedSession()?.items).toHaveLength(3);
     await user.click(finishButton());
 
     expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
@@ -115,6 +167,25 @@ describe('WorkoutScreen', () => {
     expect(saved?.lastWorkoutDate).toBe('2026-09-28');
     expect(saved?.workoutLog[0]?.totalXp).toBe(43);
     expect(saved?.workoutLog[0]?.exercises.map((e) => e.stat)).toEqual(['benchPress', 'mileRun', 'weight']);
+
+    // Only Bench Press levels up (30 → 60 XP is level 2 → 4).
+    const dialog = await screen.findByRole('dialog', { name: LEVEL_UP });
+    expect(within(dialog).getAllByRole('listitem')).toHaveLength(1);
+    expect(dialog).toHaveTextContent('Bench Press');
+    expect(dialog).toHaveTextContent('level 2 to level 4');
+    await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+  });
+
+  it('goes straight to the Hub with no dialog when nothing levels up', async () => {
+    const repo = createMemoryRepository(legacySave());
+    const user = renderWorkout(repo);
+    await logExercise(user, 'Nutrition', { 'healthy meals': '1' });
+    await user.click(finishButton());
+    expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
+    expect(repo.save).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps the session and shows an error when saving fails', async () => {
@@ -129,34 +200,18 @@ describe('WorkoutScreen', () => {
     expect(location()).toHaveTextContent(/^\/workout$/);
     expect(screen.getByRole('button', { name: 'Remove Bench Press, 3×10 @ — lbs' })).toBeInTheDocument();
     expect(screen.getByText('Total: +30 XP (1 exercise)')).toBeInTheDocument();
+    expect(storedSession()?.items.map((i) => i.entry.name)).toEqual(['Bench Press']);
     await waitFor(() => expect(finishButton()).toBeEnabled());
 
     // Retrying succeeds with the same session.
     await user.click(finishButton());
     expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: LEVEL_UP })).toBeInTheDocument();
     expect(repo.save).toHaveBeenCalledTimes(2);
     expect(repo.save.mock.calls[1]?.[0].stats.benchPress.xp).toBe(60);
   });
 
   describe('while Finish is saving', () => {
-    function pendingSave(repo: ReturnType<typeof createMemoryRepository>) {
-      let settle: { resolve(): void; reject(error: Error): void } | undefined;
-      repo.save.mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve, reject) => {
-            settle = { resolve, reject };
-          }),
-      );
-      return () => {
-        if (!settle) throw new Error('save() was not called');
-        return settle;
-      };
-    }
-
-    const exerciseButtons = () =>
-      within(screen.getByRole('region', { name: /choose exercise/i })).getAllByRole('button');
-    const removeButtons = () => screen.getAllByRole('button', { name: /^Remove / });
-
     it('disables the exercise, ✕ and Finish buttons, then goes to /hub on success', async () => {
       const repo = createMemoryRepository(legacySave());
       const saving = pendingSave(repo);
@@ -180,6 +235,7 @@ describe('WorkoutScreen', () => {
       await act(async () => saving().resolve());
       expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
       expect(location()).toHaveTextContent('/hub');
+      expect(await screen.findByRole('dialog', { name: LEVEL_UP })).toBeInTheDocument();
       expect(repo.save).toHaveBeenCalledTimes(1);
       expect(repo.save.mock.calls[0]?.[0].workoutLog[0]?.exercises.map((e) => e.stat)).toEqual(['benchPress', 'yoga']);
     });
@@ -205,9 +261,128 @@ describe('WorkoutScreen', () => {
     });
   });
 
+  describe('leaving /workout mid-save', () => {
+    it('a late success leaves the location alone and still shows the level-up dialog', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+
+      await goTo(user, 'Stats');
+      expect(await screen.findByRole('heading', { name: 'Stats stub' })).toBeInTheDocument();
+
+      await act(async () => saving().resolve());
+      const dialog = await screen.findByRole('dialog', { name: LEVEL_UP });
+      expect(dialog).toHaveTextContent('Bench Press');
+      expect(location()).toHaveTextContent(/^\/stats$/);
+      expect(repo.save).toHaveBeenCalledTimes(1);
+      expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
+
+      // Back on /workout, the saved items are gone and there's no error.
+      await user.click(within(dialog).getByRole('button', { name: 'Continue' }));
+      await goTo(user, 'Workout');
+      expect(await screen.findByText('Total: +0 XP (0 exercises)')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('a late success with no level-ups leaves the location alone and shows no dialog', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Nutrition', { 'healthy meals': '1' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+      await goTo(user, 'Stats');
+      await screen.findByRole('heading', { name: 'Stats stub' });
+
+      await act(async () => saving().resolve());
+      await waitFor(() => expect(sessionStorage.getItem(SESSION_KEY)).toBeNull());
+      expect(location()).toHaveTextContent(/^\/stats$/);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('a late failure keeps the session and shows the error on return', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await logExercise(user, 'Swimming', { laps: '4' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+
+      await goTo(user, 'Stats');
+      await screen.findByRole('heading', { name: 'Stats stub' });
+      await act(async () => saving().reject(new Error('quota exceeded')));
+      expect(location()).toHaveTextContent(/^\/stats$/);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      await goTo(user, 'Workout');
+      expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save your workout. Try again.");
+      expect(screen.getByText('Total: +50 XP (2 exercises)')).toBeInTheDocument();
+      expect(removeButtons()).toHaveLength(2);
+      expect(finishButton()).toBeEnabled();
+      expect(storedSession()?.items.map((i) => i.entry.name)).toEqual(['Bench Press', 'Swimming']);
+    });
+
+    it('an exercise form opened mid-save is disabled with a note, and works once the save is done', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+
+      await goTo(user, 'Bench Press');
+      const logButton = await screen.findByRole('button', { name: /log exercise/i });
+      expect(logButton).toBeDisabled();
+      expect(screen.getByText('Saving your workout… you can log this in a moment.')).toBeInTheDocument();
+      await user.type(screen.getByLabelText(/^sets/i), '1');
+      await user.type(screen.getByLabelText(/^reps/i), '5');
+      await user.click(logButton);
+      await user.keyboard('{Enter}');
+      expect(location()).toHaveTextContent('/workout/benchPress');
+
+      await act(async () => saving().resolve());
+      await waitFor(() => expect(logButton).toBeEnabled());
+      expect(screen.queryByText(/saving your workout/i)).not.toBeInTheDocument();
+      await user.click(logButton);
+      expect(await screen.findByText('Total: +5 XP (1 exercise)')).toBeInTheDocument();
+    });
+
+    it('a freshly mounted WorkoutScreen has its controls disabled while the save is pending', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+
+      await goTo(user, 'Stats');
+      await screen.findByRole('heading', { name: 'Stats stub' });
+      await goTo(user, 'Workout');
+      await screen.findByRole('heading', { name: /log workout/i });
+
+      expect(finishButton()).toBeDisabled();
+      expect(exerciseButtons()).toHaveLength(12);
+      for (const button of exerciseButtons()) expect(button).toBeDisabled();
+      expect(removeButtons()).toHaveLength(1);
+      for (const button of removeButtons()) expect(button).toBeDisabled();
+
+      // The screen that started Finish is gone, so a late success doesn't navigate this one.
+      await act(async () => saving().resolve());
+      expect(await screen.findByRole('dialog', { name: LEVEL_UP })).toBeInTheDocument();
+      expect(location()).toHaveTextContent(/^\/workout$/);
+      expect(finishButton()).toBeEnabled();
+      expect(screen.getByText('Total: +0 XP (0 exercises)')).toBeInTheDocument();
+    });
+  });
+
   it('goes to the Hub from "← Hub"', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave()));
-    await user.click(await screen.findByRole('link', { name: /hub/i }));
+    await user.click(await screen.findByRole('link', { name: /← hub/i }));
     expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
   });
 });

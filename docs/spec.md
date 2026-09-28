@@ -1,67 +1,57 @@
-# Spec: React port, slice 3a (Log Workout: session, exercise forms, finish)
-Branch: feat/react-port-workout
+# Spec: React port, slice 3b (workout feedback: XP popup, level-up overlay, durable session)
+Branch: feat/react-port-workout-feedback
 
 ## Goal
-From the Hub, a player can build a workout session from the 12 exercises, log each one through a validated per-type form, and finish the session. Finishing awards XP, updates levels, the streak and the workout log, and saves. This ports legacy `#screen-workout` and `#screen-exercise-form` and fixes the Weight, UTC-date and float-XP bugs.
+When a player logs an exercise, they see and hear a "+N XP" popup. When a finished workout raises any stats, a level-up dialog appears. The in-progress session now survives a reload, and leaving the screen mid-save can no longer lose the session or the save error. This ports legacy `showXpGainAnimation`, `showLevelUpAnimation` and `finishWorkout`.
 
 ## Scope
-- In: routes `/workout` and `/workout/:stat`, both guarded (no save sends you to `/`). The Hub "Log Workout" panel is enabled. Adds per-type input schemas, pure game logic in `lib/game/workout.ts`, the `logWorkout` provider action, and an inline empty-session error.
-- Out (3b): the XP-gain popup, the level-up overlay, and keeping the session across a reload. Out (slice 4): Quest Log and Profile.
+- In: the XP popup on add; the level-up overlay after Finish; the session kept in `sessionStorage` (Zod-validated); session state and Finish moved above the routes; session-local ids; a shared modal component; reduced-motion CSS.
+- Out: a "workout saved" toast when there are no level-ups (legacy just went to the Hub); multi-tab save conflicts (Supabase slice); Quest Log and Profile (slice 4).
 - Decisions:
-  - **Routing:** `/workout` shows the selector and the session. `/workout/:stat` shows the form. `:stat` is parsed with `StatKeySchema.safeParse`, and an invalid value redirects to `/workout`. Session state lives in a `WorkoutLayout` parent route (`useState` + `<Outlet context>`), so it survives moving between the two routes. Like legacy, it is memory only and a reload clears it.
-  - **Weight (owner decision: loss only, one weigh-in per session):**
-    - The form takes `currentWeight` in `player.weightUnit`.
-    - `change = player.currentWeight - currentWeight`, compared with the last saved weight.
-    - XP is 10 if the change is at least 0.5 lb (1 kg = 2.20462 lb), otherwise 0. Saved data is `{ currentWeight, change }`.
-    - Logging Weight again in the same session **replaces** the earlier weigh-in, so at most one earns XP and typos can be corrected.
-    - On finish, `player.currentWeight` becomes the logged weight. A lose/gain/maintain goal is planned for slice 4.
-  - **Streak dates:** use local dates via `toLocalIsoDate(now)`. "Yesterday" is `new Date(y, m, d - 1)`, which is DST-safe. If the saved `lastWorkoutDate` is later than today (an old UTC save), the streak and date are left unchanged. `WorkoutEntry.date` is local; timestamps stay UTC ISO.
-  - **Float XP:** every gain is rounded to 1 decimal (`Math.round(x * 10) / 10`). `totalXp` is the rounded sum.
-  - **Save strictness:** `ExerciseEntrySchema.data` stays loose, because legacy saves hold `{currentWeight}`-only data, nulls and strings. New entries are validated by the input schemas before they enter the session.
-  - **Empty finish:** the legacy `alert()` becomes an inline `role="alert"` message: "Add at least one exercise before finishing!". If saving fails, show "Couldn't save your workout. Try again." and keep the session.
+  - **Storage scope (owner decision): this tab only** (`sessionStorage`). A reload keeps the draft; closing the tab discards it.
+  - **Owner check:** the stored draft records `owner = save.player.createdAt`. A mismatch (e.g. after a reset in slice 4) drops the draft.
+  - **Leaving mid-save:** `WorkoutSessionProvider` sits above `<Routes>` and owns items, `finish()`, `finishing` and `finishError`. A failed save keeps the items and the error, which show when the player returns. A late success only navigates if the Finish screen is still mounted.
+  - **Ids:** each session item is `{ id, entry }`. The saved `WorkoutEntry` shape doesn't change; `logWorkout` receives the bare entries.
+  - **Level-up overlay:** rendered by the provider when there are level-ups, with all of them in one dialog (as legacy). Focus goes to Continue and is trapped there. Escape or Continue closes it, and focus then returns to the previous element or the screen's first heading. The Hub name becomes a focusable `h1`.
+  - **XP popup:** rendered in `WorkoutLayout`, so it's still showing after the form navigates back. It's `aria-hidden`; a persistent visually-hidden status region announces "Added Bench Press, +30 XP. Session total 30 XP." It respects reduced motion, and its timers are cleaned up on unmount.
 
 ## Data
-No DB, migration or env changes. New `src/lib/game/exercise.ts` with Zod input schemas (form strings through `z.coerce.number()`):
-- reps: sets int 1–100, reps int 1–1000, weight 0–2000 (optional)
-- distance: distance 0.1–200
-- laps: laps int 1–1000
-- session: sessions int 1–20, duration int 1–1440 (optional)
-- weight: currentWeight 20–1500
-- meal: meals int 1–10, description trimmed, max 200, optional
+No DB, migration or env changes. `src/features/workout/schema.ts`: `SessionItemSchema` and `StoredSessionSchema` (`version: 1`, owner, items max 100). `src/features/workout/sessionStorage.ts`: key `the-training-meta-workout-session`. `loadSession` returns `[]` and removes the key on throwing storage, bad JSON, a schema failure or an owner mismatch. `saveSession` never throws, and an empty session removes the key.
 
 ## UI / flow
-1. Hub → "Log Workout" (enabled, "Train & earn XP") → `/workout`.
-2. `/workout` shows "← Hub", "🏋️ Log Workout", the exercise buttons grouped by category, "Current Session" (an empty message or the entries, each with ✕), "Total: +N XP (M exercises)" and "✅ Finish Workout".
-3. Tapping an exercise opens `/workout/:stat`: "← Back", the icon and name, the XP rule, the fields, and "⚔️ Log Exercise". Invalid input shows inline errors.
-4. A valid submit adds the entry and returns to `/workout`. ✕ ("Remove <Name>") removes an entry.
-5. Finish with an empty session shows the inline error. Otherwise it applies the workout, saves, clears the session and goes to `/hub`.
+1. Add Bench 3×10 → back on `/workout` with a "+30 XP / Bench Press" popup (fade in, fade at 1500 ms, gone at 2000 ms) and a status announcement.
+2. Reload → the same session is still there.
+3. Finish with level-ups → Hub plus the "⚔️ LEVEL UP! ⚔️" dialog ("🏋️ Bench Press 1 → 2"). Continue or Escape closes it, and focus goes to the Hub name.
+4. Finish with no level-ups → straight to the Hub.
 
 ## Acceptance criteria
-- [x] `calculateXpGain`: bench 3×10 = 30. mileRun 0.3 = 3. cycling 0.3 = 1.5. swimming 4 = 20. yoga 2 = 20. meal 3 = 15.
-- [x] Weight: 180 lb → 179.5 = 10 XP, 179.8 = 0, 181 = 0. 80 kg → 79.7 kg = 10 XP.
-- [x] A second Weight entry in a session replaces the first.
-- [x] Input schemas reject 0 sets, 101 sets, 1.5 reps, 0.05 miles, NaN and empty required fields. They accept a missing lift weight or meal description.
-- [x] `updateStreak`: same day leaves it unchanged. Local yesterday adds 1. A gap resets to 1. `''` becomes 1. A future date is left unchanged. 23:30 local time counts as today.
-- [x] `applyWorkout(save, exercises, now)` returns a new save without mutating the input. It adds XP and levels, prepends the entry, updates `currentWeight`, and returns `levelUps[]`.
-- [x] Legacy saves with `{currentWeight}`-only or null data still load.
-- [x] `/workout/notAStat` redirects to `/workout`. `/workout` and `/workout/squat` with no save redirect to `/`.
-- [x] Finishing an empty session shows the inline alert, and nothing is saved.
-- [x] The Hub Log Workout panel is enabled. Quest Log and Profile stay disabled.
-- [x] E2E: seeded save → Log Workout → Bench 3×10 + Mile Run 0.3 → +33 XP → Finish → Hub shows a 1-day streak → Stats shows Bench Press level up.
+- [x] `loadSession`: a valid value round-trips. Bad JSON, a schema failure, an owner mismatch or throwing storage returns `[]` without throwing, and the corrupt key is removed.
+- [x] A reload restores the session, and the first write never clobbers the draft before it's restored.
+- [x] A draft with a different owner is discarded on load.
+- [x] Finish removes only the logged ids. Items added meanwhile stay, and storage matches.
+- [x] Leaving `/workout` mid-save: a success doesn't change the location (and the overlay still shows); a failure shows the error on return with the session intact.
+- [x] While finishing, the controls are disabled even on a freshly mounted `WorkoutScreen`.
+- [x] Keys and removal use ids: two entries with the same timestamp are removed independently.
+- [x] Legacy fixtures still pass `SaveDataSchema`, and no id wrapper leaks into `workoutLog`.
+- [x] The XP popup follows its timer sequence, leaves no pending timers after unmount, and the status text is announced.
+- [x] Reduced motion: the popup and overlay have no transitions or movement.
+- [x] The overlay has dialog semantics, focuses Continue, traps Tab, and closes on Escape or Continue. Focus lands on the Hub `h1` after closing on the Hub.
+- [x] CharacterCreatedOverlay moves onto the shared modal, still passes its tests, and now closes on Escape.
 
 ## Tests
-- Unit: `tests/unit/lib/game/workout.test.ts`, `tests/unit/lib/game/exercise.test.ts`, `tests/unit/features/workout/*.test.tsx`, `tests/unit/app/PlayerProvider.test.tsx` (logWorkout), an update to `HubScreen.test.tsx`.
-- E2E: `tests/e2e/workout.spec.ts` (happy path `@smoke` + empty finish).
+- Unit: `sessionStorage`, `WorkoutSessionProvider`, `XpPopup` (fake timers), `LevelUpOverlay`, `ModalOverlay`, plus updates to the existing workout and Hub tests.
+- E2E: `tests/e2e/workout-feedback.spec.ts`: popup → reload keeps the session → Finish → level-up dialog → Escape → Hub `h1` focused. A reduced-motion variant.
 
 ## Tasks
-- [x] Add `lib/game/exercise.ts` (input schemas) and update the `ExerciseEntrySchema` comment and types.
-- [x] Add `lib/game/workout.ts` (`calculateXpGain`, `buildExerciseEntry`, `formatExerciseData`, `toLocalIsoDate`, `updateStreak`, `applyWorkout`).
-- [x] Add `logWorkout` to `playerContext.ts` and `PlayerProvider.tsx`.
-- [x] Add `features/workout/` (`WorkoutLayout`, `WorkoutScreen`, `ExerciseForm`, `SessionList`).
-- [x] Register the nested routes in `App.tsx`. Enable the Hub panel.
-- [x] Add any button resets to `src/app/port.css` only.
+- [x] Add `schema.ts` and `sessionStorage.ts`.
+- [x] Add `WorkoutSessionProvider` (items, finishing/finishError, `finish()`, hydration, persistence) and mount it in `App.tsx`.
+- [x] Switch to id-based items in `WorkoutLayout`, `ExerciseForm`, `WorkoutScreen` (mounted-ref guard on navigate) and `SessionList`.
+- [x] Add `src/components/ModalOverlay.tsx` (show class, initial focus, Tab trap, Escape, inert background, focus restore). Move CharacterCreatedOverlay onto it.
+- [x] Add `LevelUpOverlay.tsx`. Make the Hub name an `h1 tabIndex={-1}`.
+- [x] Add `XpPopup.tsx` and the status region in `WorkoutLayout`.
+- [x] Add reduced-motion rules to `src/app/port.css`.
 - [x] Add unit and e2e tests. Tick this checklist.
 
 ## Later slices
-- 3b `feat/react-port-workout-feedback`: the XP-gain popup on log, the level-up overlay after finishing (using `levelUps`), and possibly keeping the session in `sessionStorage` (Zod-validated).
-- Slice 4 `feat/react-port-log-profile`: Quest Log, Profile (plus a lose/gain/maintain weight goal), reset with confirm. Delete `legacy/`.
+- Slice 4 `feat/react-port-log-profile`: Quest Log, Profile plus a lose/gain/maintain weight goal, reset with confirm (a reset creates a new `createdAt`, so any leftover draft is discarded), delete `legacy/`. When reset lands, make `finish()`'s synchronous draft write skip if the character changed during the save.
+- Supabase slice: a cloud `SaveRepository` with auth and RLS, multi-tab and multi-device conflicts, and whether drafts should sync.

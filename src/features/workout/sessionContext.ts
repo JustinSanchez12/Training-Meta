@@ -1,18 +1,39 @@
+import { createContext, useContext } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import type { ExerciseEntry, SaveData } from '@/lib/game/schema';
+import type { ExerciseEntry } from '@/lib/game/schema';
+import type { WorkoutResult } from '@/lib/game/workout';
+import type { SessionItem } from './schema';
 
-/** In-progress session shared by /workout and /workout/:stat through the WorkoutLayout outlet. Memory only. */
+/**
+ * The in-progress workout. Owned by WorkoutSessionProvider above the routes, so it survives leaving /workout
+ * (including mid-save), and persisted to this tab's sessionStorage so it survives a reload.
+ */
 export interface WorkoutSession {
-  save: SaveData;
-  entries: readonly ExerciseEntry[];
-  addEntry(entry: ExerciseEntry): void;
-  removeEntry(index: number): void;
-  /** Removes exactly these entries (by identity), e.g. the ones just saved, keeping anything added meanwhile. */
-  removeEntries(entries: readonly ExerciseEntry[]): void;
+  items: readonly SessionItem[];
+  /** Adds an entry (a new weigh-in replaces an earlier one) and returns the new item and session total. */
+  addEntry(entry: ExerciseEntry): { item: SessionItem; totalXp: number };
+  removeItem(id: string): void;
+  finishing: boolean;
+  finishError: string | null;
+  /** Saves the session. Resolves to the result, or null when empty or failed (then `finishError` is set). */
+  finish(): Promise<WorkoutResult | null>;
 }
 
+export const WorkoutSessionContext = createContext<WorkoutSession | null>(null);
+
 export function useWorkoutSession(): WorkoutSession {
-  const context = useOutletContext<WorkoutSession | undefined>();
-  if (!context) throw new Error('useWorkoutSession must be used inside <WorkoutLayout>');
+  const context = useContext(WorkoutSessionContext);
+  if (!context) throw new Error('useWorkoutSession must be used inside <WorkoutSessionProvider>');
+  return context;
+}
+
+/** Provided by WorkoutLayout's outlet: shows the "+N XP" popup and announces it. */
+export interface XpFeedback {
+  showXpGain(item: SessionItem, totalXp: number): void;
+}
+
+export function useXpFeedback(): XpFeedback {
+  const context = useOutletContext<XpFeedback | undefined>();
+  if (!context) throw new Error('useXpFeedback must be used inside <WorkoutLayout>');
   return context;
 }

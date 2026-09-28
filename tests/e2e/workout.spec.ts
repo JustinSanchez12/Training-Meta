@@ -63,6 +63,14 @@ test.describe('log workout', () => {
     await expect(page).toHaveURL(/\/hub$/);
     await expect(page.getByText('🔥 1 day streak')).toBeVisible();
 
+    // Bench levels up, so the level-up dialog covers the Hub until it's dismissed.
+    const levelUp = page.getByRole('dialog', { name: '⚔️ LEVEL UP! ⚔️' });
+    await expect(levelUp).toBeVisible();
+    await expect(levelUp.getByRole('listitem')).toHaveCount(1);
+    await expect(levelUp.getByRole('listitem')).toContainText('Bench Press');
+    await levelUp.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
     await page.getByRole('link', { name: /stats/i }).click();
     await expect(page).toHaveURL(/\/stats$/);
     // Bench: 30 + 30 = 60 XP → level 4 (was 2).
@@ -128,6 +136,8 @@ test.describe('log workout', () => {
     await page.getByRole('button', { name: /finish workout/i }).click();
     await expect(page).toHaveURL(/\/hub$/);
     await expect(page.getByText('🔥 5 day streak')).toBeVisible();
+    // Nutrition 0 → 10 XP stays level 1: no level-up dialog.
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
   test('/workout/notAStat redirects to /workout', async ({ page }) => {
