@@ -37,7 +37,7 @@ The player will achieve complete satisfactory because the character they play is
 
 ## Getting Started
 
-Requires Node 20+ (see `.nvmrc`).
+Requires Node 22.22+ or 24.15+ (see `.nvmrc`).
 
 ```bash
 npm install

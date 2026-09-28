@@ -12,10 +12,12 @@ export const StatProgressSchema = z.object({
 export const GenderSchema = z.enum(['male', 'female', 'unspecified']);
 export const WeightUnitSchema = z.enum(['lbs', 'kg']);
 
+// Save-side bounds match what the legacy app actually enforced, so no old save is rejected.
+// Stricter input limits live in the character form schema.
 export const PlayerSchema = z.object({
   name: z.string().min(1).max(20),
   gender: GenderSchema,
-  age: z.number().int().min(1).max(120),
+  age: z.number().int().min(1),
   startWeight: z.number().positive(),
   currentWeight: z.number().positive(),
   weightUnit: WeightUnitSchema,

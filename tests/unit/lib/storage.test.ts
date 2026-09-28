@@ -110,4 +110,28 @@ describe('createLocalSaveRepository', () => {
     localStorage.setItem(SAVE_KEY, JSON.stringify(legacySave()));
     await expect(createLocalSaveRepository().load()).resolves.toEqual(legacySave());
   });
+
+  it('loads a legacy save with an age above the character-form limit (legacy never capped age)', async () => {
+    const save = legacySave();
+    save.player.age = 150;
+    storage.setItem(SAVE_KEY, JSON.stringify(save));
+    await expect(createLocalSaveRepository(storage).load()).resolves.toEqual(save);
+  });
+
+  it('backs up an unreadable save before overwriting it', async () => {
+    storage.setItem(SAVE_KEY, '{not json');
+    await createLocalSaveRepository(storage).save(legacySave());
+
+    const backups = Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter((k) => k?.startsWith(`${SAVE_KEY}-backup-`));
+    expect(backups).toHaveLength(1);
+    expect(storage.getItem(backups[0] ?? '')).toBe('{not json');
+    expect(JSON.parse(storage.getItem(SAVE_KEY) ?? '')).toEqual(legacySave());
+  });
+
+  it('does not create a backup when overwriting a readable save', async () => {
+    const repo = createLocalSaveRepository(storage);
+    await repo.save(legacySave());
+    await repo.save(legacySave());
+    expect(storage.length).toBe(1);
+  });
 });

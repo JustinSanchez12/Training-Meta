@@ -3,6 +3,29 @@ import { SaveDataSchema, type SaveData } from './game/schema';
 /** Same key as the legacy app, so existing saves on the same origin keep working. */
 export const SAVE_KEY = 'ape-storage-the-training-meta';
 
+/** Where an existing save that fails to load is copied before a new save overwrites it. */
+export function backupKey(key: string, now: Date = new Date()): string {
+  return `${key}-backup-${now.getTime()}`;
+}
+
+/** Never silently destroy player data we couldn't read: keep a copy for manual recovery. */
+function backUpUnreadableSave(storage: Storage, key: string): void {
+  const existing = storage.getItem(key);
+  if (existing === null) return;
+  let readable: boolean;
+  try {
+    const parsed = SaveDataSchema.safeParse(JSON.parse(existing));
+    readable = parsed.success && !parsed.data.player.isNewPlayer;
+  } catch {
+    readable = false;
+  }
+  if (!readable) {
+    const backup = backupKey(key);
+    storage.setItem(backup, existing);
+    console.warn(`[Storage] Existing save could not be read; backed up to "${backup}" before overwriting`);
+  }
+}
+
 /** Async on purpose: a Supabase-backed implementation will replace the localStorage one. */
 export interface SaveRepository {
   load(): Promise<SaveData | null>;
@@ -43,7 +66,9 @@ export function createLocalSaveRepository(storage: Storage = window.localStorage
     },
 
     async save(data) {
-      storage.setItem(key, JSON.stringify(SaveDataSchema.parse(data)));
+      const next = JSON.stringify(SaveDataSchema.parse(data));
+      backUpUnreadableSave(storage, key);
+      storage.setItem(key, next);
     },
 
     async clear() {
