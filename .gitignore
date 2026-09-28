@@ -1,0 +1,22 @@
+# Dependencies & builds
+node_modules/
+dist/
+coverage/
+
+# Env: only the example is committed
+.env
+.env.*
+!.env.example
+
+# Tooling
+.vercel/
+playwright-report/
+test-results/
+blob-report/
+supabase/.temp/
+supabase/.branches/
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
