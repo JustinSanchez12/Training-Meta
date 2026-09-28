@@ -1,0 +1,33 @@
+/* Additions for the React port. styles.css is kept identical to legacy/css/styles.css. */
+
+#root {
+  height: 100%;
+}
+
+.gender-fieldset {
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-error {
+  color: var(--red);
+  font-size: 14px;
+}
+
+.overlay-note {
+  color: #aaa;
+  margin: 12px 0;
+}
+
+.hub-panel:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.hub-panel:disabled:hover {
+  border-color: var(--border);
+  transform: none;
+  box-shadow: none;
+}
