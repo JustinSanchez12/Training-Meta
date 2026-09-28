@@ -25,7 +25,8 @@ export const PlayerSchema = z.object({
   isNewPlayer: z.boolean(),
 });
 
-// `data` stays loose until workout logging is ported (slice 3), which adds a schema per exercise type.
+// `data` stays loose on purpose: legacy saves hold partial shapes ({currentWeight} with no `change`), nulls
+// (NaN serialised by JSON) and strings. New entries are validated by the input schemas in exercise.ts first.
 export const ExerciseEntrySchema = z.object({
   stat: StatKeySchema,
   name: z.string(),
@@ -56,4 +57,6 @@ export type StatProgress = z.infer<typeof StatProgressSchema>;
 export type Gender = z.infer<typeof GenderSchema>;
 export type WeightUnit = z.infer<typeof WeightUnitSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
+export type ExerciseEntry = z.infer<typeof ExerciseEntrySchema>;
+export type WorkoutEntry = z.infer<typeof WorkoutEntrySchema>;
 export type SaveData = z.infer<typeof SaveDataSchema>;
