@@ -1,5 +1,5 @@
 import type { StatProgress } from '@/lib/game/schema';
-import { MAX_LEVEL, STAT_DEFINITIONS, type StatKey } from '@/lib/game/stats';
+import { MAX_LEVEL, STAT_DEFINITIONS, formatCategory, type StatKey } from '@/lib/game/stats';
 import { getXpProgress } from '@/lib/game/xp';
 
 /** Everything the Stats grid and detail panel display for one stat. */
@@ -34,7 +34,7 @@ export function getStatView(key: StatKey, stat: StatProgress): StatView {
     // Floored: legacy saves can hold float XP like 3.0000000000000004.
     xpText: isMax ? 'MAX LEVEL' : `${Math.floor(progress.xpIntoLevel)} / ${progress.xpForNext} XP`,
     totalXp: Math.floor(stat.xp),
-    categoryLabel: def.category.charAt(0).toUpperCase() + def.category.slice(1),
+    categoryLabel: formatCategory(def.category),
     xpRule: def.xpDescription,
   };
 }

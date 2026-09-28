@@ -50,3 +50,18 @@
 a.hub-panel {
   text-decoration: none;
 }
+
+/* Workout: legacy used a <span> for the form title and bare divs for the session list. */
+.exercise-form-title {
+  font: inherit;
+  color: inherit;
+}
+
+.session-list {
+  list-style: none;
+}
+
+.optional-label {
+  color: var(--text-dim);
+  font-weight: 400;
+}

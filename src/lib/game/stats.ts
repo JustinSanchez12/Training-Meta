@@ -29,6 +29,11 @@ export interface StatDefinition {
 
 export const MAX_LEVEL = 99;
 
+/** "strength" → "Strength" */
+export function formatCategory(category: StatCategory): string {
+  return category.charAt(0).toUpperCase() + category.slice(1);
+}
+
 export const STAT_DEFINITIONS: Record<StatKey, StatDefinition> = {
   benchPress: { name: 'Bench Press', icon: '🏋️', category: 'strength', xpType: 'reps', xpDescription: 'sets × reps = XP', color: '#e74c3c' },
   squat: { name: 'Squat', icon: '🦵', category: 'strength', xpType: 'reps', xpDescription: 'sets × reps = XP', color: '#e67e22' },
