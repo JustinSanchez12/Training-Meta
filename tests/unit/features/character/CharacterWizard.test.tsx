@@ -176,6 +176,32 @@ describe('CharacterWizard', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/hub');
   });
 
+  it('the overlay is a modal dialog that focuses "Enter the Hub" and traps Tab', async () => {
+    const user = renderWizard(createMemoryRepository());
+    await completeSteps(user);
+    await user.click(screen.getByRole('button', { name: /create character/i }));
+    const dialog = await screen.findByRole('dialog', { name: '⚔️ CHARACTER CREATED ⚔️' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    const enter = screen.getByRole('button', { name: /enter the hub/i });
+    expect(enter).toHaveFocus();
+    await user.tab();
+    expect(enter).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(enter).toHaveFocus();
+  });
+
+  it('goes to the Hub when Escape is pressed on the overlay', async () => {
+    const user = renderWizard(createMemoryRepository());
+    await completeSteps(user);
+    await user.click(screen.getByRole('button', { name: /create character/i }));
+    await screen.findByRole('dialog');
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/hub');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('[inert]')).toHaveLength(0);
+  });
+
   it('shows an error and no overlay when saving fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const repo = createMemoryRepository();

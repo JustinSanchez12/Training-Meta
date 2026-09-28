@@ -62,6 +62,14 @@ describe('HubScreen', () => {
     expect(screen.getByText(/1 day streak/)).toBeInTheDocument();
   });
 
+  it('renders the player name as a programmatically focusable h1 (focus target after dialogs)', async () => {
+    renderHub(legacySave());
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Aragorn' });
+    expect(heading).toHaveClass('hub-player-name');
+    expect(heading).toHaveAttribute('tabindex', '-1');
+    expect(heading.closest('.screen.active')).not.toBeNull();
+  });
+
   it('enables the Stats panel as a link to /stats', async () => {
     renderHub(legacySave());
     const stats = await screen.findByRole('link', { name: /stats/i });
