@@ -67,9 +67,9 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
       // A modal closing underneath another must not pull focus out of the one still open.
       if (!wasTop) return;
       const returnTo = returnFocusTo.current ?? null;
-      // Deferred: when onClose navigates, this cleanup runs in the same commit that swaps screens, before the
-      // new screen's DOM exists. A microtask runs after that commit, so the fallback heading is the new one.
-      queueMicrotask(() => {
+      // Deferred to the next frame: when onClose navigates, React Router commits the new screen in a transition
+      // that can land after this cleanup (even after a microtask), so resolve the target once it has rendered.
+      requestAnimationFrame(() => {
         if (modalStack.length === 0) restoreFocus(returnTo);
       });
     };
