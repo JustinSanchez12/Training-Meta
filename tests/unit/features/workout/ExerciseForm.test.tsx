@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { SaveData } from '@/lib/game/schema';
 import { legacySave } from '../../fixtures/saves';
@@ -163,7 +163,10 @@ describe('ExerciseForm', () => {
     const popup = document.querySelector('.xp-popup');
     expect(popup).toHaveTextContent('+30 XPBench Press');
     expect(popup).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.getByRole('status')).toHaveTextContent('Added Bench Press, +30 XP. Session total 30 XP.');
+    // Set on the next animation frame (cleared first so identical text is re-announced).
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Added Bench Press, +30 XP. Session total 30 XP.'),
+    );
   });
 
   it('awards Weight XP for a 0.3 kg loss in kg', async () => {

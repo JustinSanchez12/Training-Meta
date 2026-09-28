@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SessionItem } from '@/features/workout/schema';
+import { MAX_ENTRY_XP, type SessionItem } from '@/features/workout/schema';
 import { SESSION_KEY, getSessionStorage, loadSession, newItemId, saveSession } from '@/features/workout/sessionStorage';
 
 const OWNER = '2025-01-01T12:00:00.000Z';
@@ -66,7 +66,8 @@ describe('workout sessionStorage', () => {
     ['an empty id', JSON.stringify({ version: 1, owner: OWNER, items: [{ id: '', entry: items[0]?.entry }] })],
     ['an unknown stat', JSON.stringify({ version: 1, owner: OWNER, items: [{ id: 'x', entry: { ...items[0]?.entry, stat: 'telekinesis' } }] })],
     ['a non-array items', JSON.stringify({ version: 1, owner: OWNER, items: {} })],
-    ['more than 100 items', JSON.stringify({ version: 1, owner: OWNER, items: Array.from({ length: 101 }, (_, i) => ({ id: `i${i}`, entry: items[0]?.entry })) })],
+    ['negative XP (-5)', JSON.stringify({ version: 1, owner: OWNER, items: [{ id: 'x', entry: { ...items[0]?.entry, xpGained: -5 } }] })],
+    ['XP above MAX_ENTRY_XP (100001)', JSON.stringify({ version: 1, owner: OWNER, items: [{ id: 'x', entry: { ...items[0]?.entry, xpGained: MAX_ENTRY_XP + 1 } }] })],
     ['null', 'null'],
   ])('%s → [] and the key is removed', (_label, raw) => {
     sessionStorage.setItem(SESSION_KEY, raw);
@@ -78,10 +79,17 @@ describe('workout sessionStorage', () => {
     expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
   });
 
-  it('accepts exactly 100 items', () => {
-    const many = Array.from({ length: 100 }, (_, i) => ({ id: `i${i}`, entry: items[0]!.entry }));
+  it('round-trips a long session (150 items): there is no item cap', () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({ id: `i${i}`, entry: items[0]!.entry }));
     saveSession(sessionStorage, OWNER, many);
-    expect(loadSession(sessionStorage, OWNER)).toHaveLength(100);
+    expect(loadSession(sessionStorage, OWNER)).toEqual(many);
+    expect(sessionStorage.getItem(SESSION_KEY)).not.toBeNull();
+  });
+
+  it('accepts an entry at exactly MAX_ENTRY_XP', () => {
+    const maxed = [{ id: 'max', entry: { ...items[0]!.entry, xpGained: MAX_ENTRY_XP } }];
+    saveSession(sessionStorage, OWNER, maxed);
+    expect(loadSession(sessionStorage, OWNER)).toEqual(maxed);
   });
 
   it('discards a draft that belongs to another character', () => {

@@ -74,6 +74,7 @@ export function renderWorkout(repository: SaveRepository, initialPath = '/workou
             <nav aria-label="Test navigation">
               <Link to="/stats">Test: go to Stats</Link>
               <Link to="/workout">Test: go to Workout</Link>
+              <Link to="/workout/benchPress">Test: go to Bench Press</Link>
             </nav>
           </WorkoutSessionProvider>
         </WaitForLoad>
@@ -88,7 +89,7 @@ export type User = ReturnType<typeof userEvent.setup>;
 export const location = () => screen.getByTestId('location');
 
 /** Navigates via the harness's test links (outside the routes). */
-export async function goTo(user: User, where: 'Stats' | 'Workout') {
+export async function goTo(user: User, where: 'Stats' | 'Workout' | 'Bench Press') {
   const nav = screen.getByRole('navigation', { name: 'Test navigation' });
   await user.click(within(nav).getByRole('link', { name: `Test: go to ${where}` }));
 }

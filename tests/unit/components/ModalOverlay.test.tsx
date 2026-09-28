@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -53,9 +53,39 @@ async function open(props: HarnessProps = {}) {
 
 const continueButton = () => screen.getByRole('button', { name: 'Continue' });
 
+/** Two modals mounted together: A first (bottom), then B (top). Each closes itself via its onClose. */
+function Stack({ onCloseA, onCloseB }: { onCloseA: () => void; onCloseB: () => void }) {
+  const [a, setA] = useState(true);
+  const [b, setB] = useState(true);
+  return (
+    <>
+      <div className="screen active">
+        <h2>Stack screen</h2>
+      </div>
+      {a && (
+        <ModalOverlay title="Modal A" titleId="modal-a" actionLabel="Close A" onClose={() => { onCloseA(); setA(false); }}>
+          <p>A body</p>
+        </ModalOverlay>
+      )}
+      {b && (
+        <ModalOverlay title="Modal B" titleId="modal-b" actionLabel="Close B" onClose={() => { onCloseB(); setB(false); }}>
+          <p>B body</p>
+        </ModalOverlay>
+      )}
+    </>
+  );
+}
+
+/** The portal host of a dialog (the direct <body> child the module keeps interactive). */
+const hostOf = (dialog: HTMLElement) => dialog.parentElement!;
+
 describe('ModalOverlay', () => {
   afterEach(() => {
     vi.useRealTimers();
+    // The modal stack is module-level: unmount everything and prove nothing leaked into the next case.
+    cleanup();
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0);
+    expect(document.querySelectorAll('[inert]')).toHaveLength(0);
   });
 
   it('is a modal dialog named by its title, portaled to <body>', async () => {
@@ -141,7 +171,8 @@ describe('ModalOverlay', () => {
     const { user } = await open({ onClose });
     await user.click(continueButton());
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus();
+    // Restored on the next frame (after a navigation's transition would have committed).
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus());
   });
 
   it('closes on Escape and returns focus to the element that opened it', async () => {
@@ -150,7 +181,7 @@ describe('ModalOverlay', () => {
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus());
   });
 
   it('ignores an Escape that something else already handled', async () => {
@@ -173,8 +204,85 @@ describe('ModalOverlay', () => {
     expect(screen.queryByRole('button', { name: 'Open' })).not.toBeInTheDocument();
     await user.keyboard('{Escape}');
     const heading = screen.getByRole('heading', { name: 'Screen heading' });
-    expect(heading).toHaveFocus();
+    await waitFor(() => expect(heading).toHaveFocus());
     // Made programmatically focusable, not tabbable.
     expect(heading).toHaveAttribute('tabindex', '-1');
+  });
+
+  describe('stacked modals', () => {
+    function renderStack() {
+      const onCloseA = vi.fn();
+      const onCloseB = vi.fn();
+      const { container } = render(<Stack onCloseA={onCloseA} onCloseB={onCloseB} />);
+      const a = screen.getByRole('dialog', { name: 'Modal A' });
+      const b = screen.getByRole('dialog', { name: 'Modal B' });
+      return { onCloseA, onCloseB, container, a, b };
+    }
+
+    it('only the top modal is interactive: the page and the lower modal are inert', () => {
+      const { container, a, b } = renderStack();
+      expect(container).toHaveAttribute('inert');
+      expect(hostOf(a)).toHaveAttribute('inert');
+      expect(hostOf(b)).not.toHaveAttribute('inert');
+      expect(within(b).getByRole('button', { name: 'Close B' })).toHaveFocus();
+    });
+
+    it('Escape closes only the top modal (B); A stays open and the page stays inert', async () => {
+      const user = userEvent.setup();
+      const { onCloseA, onCloseB, container, a } = renderStack();
+      await user.keyboard('{Escape}');
+
+      expect(onCloseB).toHaveBeenCalledTimes(1);
+      expect(onCloseA).not.toHaveBeenCalled();
+      expect(screen.queryByRole('dialog', { name: 'Modal B' })).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Modal A' })).toBe(a);
+      // A is now the top: it's interactive, the page behind it still isn't.
+      expect(hostOf(a)).not.toHaveAttribute('inert');
+      expect(container).toHaveAttribute('inert');
+
+      // The next Escape closes A.
+      await user.keyboard('{Escape}');
+      expect(onCloseA).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(document.querySelectorAll('[inert]')).toHaveLength(0);
+    });
+
+    it('closing the lower modal (A) first keeps the page inert and focus inside B', async () => {
+      const { onCloseA, container, b } = renderStack();
+      const closeB = within(b).getByRole('button', { name: 'Close B' });
+      expect(closeB).toHaveFocus();
+
+      // A is inert, so this can only happen programmatically (e.g. its owner unmounts it).
+      fireEvent.click(screen.getByRole('button', { name: 'Close A' }));
+      expect(onCloseA).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('dialog', { name: 'Modal A' })).not.toBeInTheDocument();
+
+      expect(container).toHaveAttribute('inert');
+      expect(hostOf(b)).not.toHaveAttribute('inert');
+      // Let any deferred focus restore run (it's queued for the next frame): it must not pull focus out of B.
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+      expect(closeB).toHaveFocus();
+    });
+
+    it('after both close, no inert is left and pre-existing inert elements stay inert', async () => {
+      const already = document.createElement('div');
+      already.setAttribute('inert', '');
+      document.body.appendChild(already);
+      try {
+        const user = userEvent.setup();
+        const { container } = renderStack();
+        expect(container).toHaveAttribute('inert');
+        await user.keyboard('{Escape}');
+        await user.keyboard('{Escape}');
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(container).not.toHaveAttribute('inert');
+        expect(already).toHaveAttribute('inert');
+        expect([...document.querySelectorAll('[inert]')]).toEqual([already]);
+        // With the stack empty, focus falls back to the screen heading.
+        await waitFor(() => expect(screen.getByRole('heading', { name: 'Stack screen' })).toHaveFocus());
+      } finally {
+        already.remove();
+      }
+    });
   });
 });

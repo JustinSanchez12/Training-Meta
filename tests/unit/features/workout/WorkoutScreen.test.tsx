@@ -66,7 +66,9 @@ describe('WorkoutScreen', () => {
     expect(within(session).getByText('+3 XP')).toBeInTheDocument();
     expect(screen.getByText('Total: +33 XP (2 exercises)')).toBeInTheDocument();
     // The layout's status region announces the latest gain and the running total.
-    expect(screen.getByRole('status')).toHaveTextContent('Added Mile Run, +3 XP. Session total 33 XP.');
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('Added Mile Run, +3 XP. Session total 33 XP.'),
+    );
   });
 
   it('keeps the session when leaving /workout for another screen and coming back', async () => {
@@ -323,6 +325,31 @@ describe('WorkoutScreen', () => {
       expect(removeButtons()).toHaveLength(2);
       expect(finishButton()).toBeEnabled();
       expect(storedSession()?.items.map((i) => i.entry.name)).toEqual(['Bench Press', 'Swimming']);
+    });
+
+    it('an exercise form opened mid-save is disabled with a note, and works once the save is done', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+
+      await goTo(user, 'Bench Press');
+      const logButton = await screen.findByRole('button', { name: /log exercise/i });
+      expect(logButton).toBeDisabled();
+      expect(screen.getByText('Saving your workout… you can log this in a moment.')).toBeInTheDocument();
+      await user.type(screen.getByLabelText(/^sets/i), '1');
+      await user.type(screen.getByLabelText(/^reps/i), '5');
+      await user.click(logButton);
+      await user.keyboard('{Enter}');
+      expect(location()).toHaveTextContent('/workout/benchPress');
+
+      await act(async () => saving().resolve());
+      await waitFor(() => expect(logButton).toBeEnabled());
+      expect(screen.queryByText(/saving your workout/i)).not.toBeInTheDocument();
+      await user.click(logButton);
+      expect(await screen.findByText('Total: +5 XP (1 exercise)')).toBeInTheDocument();
     });
 
     it('a freshly mounted WorkoutScreen has its controls disabled while the save is pending', async () => {

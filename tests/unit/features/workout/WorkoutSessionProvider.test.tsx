@@ -226,7 +226,7 @@ describe('WorkoutSessionProvider', () => {
       expect(repo.save).not.toHaveBeenCalled();
     });
 
-    it('removes only the logged ids: items added during the save stay, and storage matches', async () => {
+    it('refuses to add an exercise while a save is in flight, then allows it again', async () => {
       const repo = createMemoryRepository(legacySave());
       const saving = pendingSave(repo);
       const { session } = renderProvider(repo);
@@ -241,26 +241,81 @@ describe('WorkoutSessionProvider', () => {
       });
       expect(await screen.findByText('1 items, finishing')).toBeInTheDocument();
 
-      // Added while the save is in flight: must survive the post-save removal.
+      expect(() => session().addEntry(swim)).toThrow('Cannot add an exercise while the workout is being saved');
+      expect(session().items.map((i) => i.entry)).toEqual([bench]);
+      expect(readStored()?.items.map((i) => i.entry)).toEqual([bench]);
+
+      await act(async () => {
+        saving().resolve();
+        await pending;
+      });
+      expect(session().items).toEqual([]);
+      // Only the logged entry reached the save.
+      expect(repo.save.mock.calls[0]?.[0].workoutLog[0]?.exercises).toEqual([bench]);
+
       act(() => {
         session().addEntry(swim);
       });
-      const meanwhile = session().items[1]!;
+      expect(session().items.map((i) => i.entry)).toEqual([swim]);
+    });
 
-      let result: WorkoutResult | null | undefined;
-      await act(async () => {
-        saving().resolve();
-        result = await pending;
+    it('removes by id during a pending save: the other logged item stays, and storage matches', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const { session } = renderProvider(repo);
+      await screen.findByText('0 items');
+      // Identical entries: only the id tells them apart.
+      act(() => {
+        session().addEntry(bench);
       });
-      expect(result?.levelUps.map((l) => l.stat)).toEqual(['benchPress']);
-      expect(session().items).toEqual([meanwhile]);
-      expect(session().finishing).toBe(false);
-      expect(session().finishError).toBeNull();
-      expect(readStored()?.items).toEqual([meanwhile]);
+      act(() => {
+        session().addEntry(bench);
+      });
+      const [first, second] = session().items;
 
-      // Only the logged entry reached the save.
-      const saved = repo.save.mock.calls[0]?.[0];
-      expect(saved?.workoutLog[0]?.exercises).toEqual([bench]);
+      let pending: Promise<WorkoutResult | null> | undefined;
+      act(() => {
+        pending = session().finish();
+      });
+      await screen.findByText('2 items, finishing');
+
+      act(() => session().removeItem(first!.id));
+      expect(session().items).toEqual([second]);
+      expect(readStored()?.items).toEqual([second]);
+
+      await act(async () => {
+        saving().reject(new Error('quota exceeded'));
+        await pending;
+      });
+      expect(session().items).toEqual([second]);
+      expect(readStored()?.items).toEqual([second]);
+      expect(session().finishError).toBe("Couldn't save your workout. Try again.");
+    });
+
+    it('removes the stored draft synchronously when finish() resolves, before effects flush', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const { session } = renderProvider(repo);
+      await screen.findByText('0 items');
+      act(() => {
+        session().addEntry(bench);
+        session().addEntry(swim);
+      });
+      expect(readStored()?.items).toHaveLength(2);
+
+      let storedAtResolve: string | null | undefined;
+      let domAtResolve: string | null | undefined;
+      await act(async () => {
+        await session().finish();
+        // Still inside act: React hasn't committed the post-save render or run the persist effect yet.
+        storedAtResolve = sessionStorage.getItem(SESSION_KEY);
+        domAtResolve = screen.queryByText(/items/)?.textContent ?? null;
+      });
+      // Nothing from finish() has been committed yet (act batches it all), so no persist effect has run...
+      expect(domAtResolve).toBe('2 items');
+      // ...yet the draft is already gone: a reload now can't restore (and re-log) the saved workout.
+      expect(storedAtResolve).toBeNull();
+      expect(screen.getByText('0 items')).toBeInTheDocument();
     });
 
     it('keeps the items and sets the error when the save fails', async () => {
@@ -404,7 +459,7 @@ describe('WorkoutSessionProvider', () => {
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(heading).toHaveFocus();
+    await waitFor(() => expect(heading).toHaveFocus());
     expect(heading).toHaveAttribute('tabindex', '-1');
   });
 });

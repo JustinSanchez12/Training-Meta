@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SessionItemSchema, StoredSessionSchema } from '@/features/workout/schema';
+import { MAX_ENTRY_XP, SessionItemSchema, StoredSessionSchema } from '@/features/workout/schema';
 import { SaveDataSchema, type ExerciseEntry } from '@/lib/game/schema';
 import { applyWorkout } from '@/lib/game/workout';
 import { legacySave } from '../../fixtures/saves';
@@ -31,14 +31,32 @@ describe('SessionItemSchema', () => {
 });
 
 describe('StoredSessionSchema', () => {
-  it('requires version 1, an owner and at most 100 items', () => {
+  it('requires version 1 and an owner', () => {
     const items = [{ id: 'a', entry }];
     expect(StoredSessionSchema.safeParse({ version: 1, owner: 'o', items }).success).toBe(true);
     expect(StoredSessionSchema.safeParse({ version: 1, owner: 'o', items: [] }).success).toBe(true);
     expect(StoredSessionSchema.safeParse({ version: 2, owner: 'o', items }).success).toBe(false);
     expect(StoredSessionSchema.safeParse({ version: 1, items }).success).toBe(false);
-    const tooMany = Array.from({ length: 101 }, (_, i) => ({ id: String(i), entry }));
-    expect(StoredSessionSchema.safeParse({ version: 1, owner: 'o', items: tooMany }).success).toBe(false);
+  });
+
+  it('has no item cap, so a long session is never silently discarded', () => {
+    const many = Array.from({ length: 150 }, (_, i) => ({ id: String(i), entry }));
+    expect(StoredSessionSchema.safeParse({ version: 1, owner: 'o', items: many }).success).toBe(true);
+  });
+});
+
+describe('SessionItemSchema XP bounds', () => {
+  it('exports the documented maximum', () => {
+    expect(MAX_ENTRY_XP).toBe(100_000);
+  });
+
+  it.each([
+    [0, true],
+    [MAX_ENTRY_XP, true],
+    [-5, false],
+    [MAX_ENTRY_XP + 1, false],
+  ])('xpGained %d → valid: %s', (xpGained, valid) => {
+    expect(SessionItemSchema.safeParse({ id: 'a', entry: { ...entry, xpGained } }).success).toBe(valid);
   });
 });
 
