@@ -25,32 +25,32 @@ No DB, migration or env changes. `src/features/workout/schema.ts`: `SessionItemS
 4. Finish with no level-ups → straight to the Hub.
 
 ## Acceptance criteria
-- [ ] `loadSession`: a valid value round-trips. Bad JSON, a schema failure, an owner mismatch or throwing storage returns `[]` without throwing, and the corrupt key is removed.
-- [ ] A reload restores the session, and the first write never clobbers the draft before it's restored.
-- [ ] A draft with a different owner is discarded on load.
-- [ ] Finish removes only the logged ids. Items added meanwhile stay, and storage matches.
-- [ ] Leaving `/workout` mid-save: a success doesn't change the location (and the overlay still shows); a failure shows the error on return with the session intact.
-- [ ] While finishing, the controls are disabled even on a freshly mounted `WorkoutScreen`.
-- [ ] Keys and removal use ids: two entries with the same timestamp are removed independently.
-- [ ] Legacy fixtures still pass `SaveDataSchema`, and no id wrapper leaks into `workoutLog`.
-- [ ] The XP popup follows its timer sequence, leaves no pending timers after unmount, and the status text is announced.
-- [ ] Reduced motion: the popup and overlay have no transitions or movement.
-- [ ] The overlay has dialog semantics, focuses Continue, traps Tab, and closes on Escape or Continue. Focus lands on the Hub `h1` after closing on the Hub.
-- [ ] CharacterCreatedOverlay moves onto the shared modal, still passes its tests, and now closes on Escape.
+- [x] `loadSession`: a valid value round-trips. Bad JSON, a schema failure, an owner mismatch or throwing storage returns `[]` without throwing, and the corrupt key is removed.
+- [x] A reload restores the session, and the first write never clobbers the draft before it's restored.
+- [x] A draft with a different owner is discarded on load.
+- [x] Finish removes only the logged ids. Items added meanwhile stay, and storage matches.
+- [x] Leaving `/workout` mid-save: a success doesn't change the location (and the overlay still shows); a failure shows the error on return with the session intact.
+- [x] While finishing, the controls are disabled even on a freshly mounted `WorkoutScreen`.
+- [x] Keys and removal use ids: two entries with the same timestamp are removed independently.
+- [x] Legacy fixtures still pass `SaveDataSchema`, and no id wrapper leaks into `workoutLog`.
+- [x] The XP popup follows its timer sequence, leaves no pending timers after unmount, and the status text is announced.
+- [x] Reduced motion: the popup and overlay have no transitions or movement.
+- [x] The overlay has dialog semantics, focuses Continue, traps Tab, and closes on Escape or Continue. Focus lands on the Hub `h1` after closing on the Hub.
+- [x] CharacterCreatedOverlay moves onto the shared modal, still passes its tests, and now closes on Escape.
 
 ## Tests
 - Unit: `sessionStorage`, `WorkoutSessionProvider`, `XpPopup` (fake timers), `LevelUpOverlay`, `ModalOverlay`, plus updates to the existing workout and Hub tests.
 - E2E: `tests/e2e/workout-feedback.spec.ts`: popup → reload keeps the session → Finish → level-up dialog → Escape → Hub `h1` focused. A reduced-motion variant.
 
 ## Tasks
-- [ ] Add `schema.ts` and `sessionStorage.ts`.
-- [ ] Add `WorkoutSessionProvider` (items, finishing/finishError, `finish()`, hydration, persistence) and mount it in `App.tsx`.
-- [ ] Switch to id-based items in `WorkoutLayout`, `ExerciseForm`, `WorkoutScreen` (mounted-ref guard on navigate) and `SessionList`.
-- [ ] Add `src/components/ModalOverlay.tsx` (show class, initial focus, Tab trap, Escape, inert background, focus restore). Move CharacterCreatedOverlay onto it.
-- [ ] Add `LevelUpOverlay.tsx`. Make the Hub name an `h1 tabIndex={-1}`.
-- [ ] Add `XpPopup.tsx` and the status region in `WorkoutLayout`.
-- [ ] Add reduced-motion rules to `src/app/port.css`.
-- [ ] Add unit and e2e tests. Tick this checklist.
+- [x] Add `schema.ts` and `sessionStorage.ts`.
+- [x] Add `WorkoutSessionProvider` (items, finishing/finishError, `finish()`, hydration, persistence) and mount it in `App.tsx`.
+- [x] Switch to id-based items in `WorkoutLayout`, `ExerciseForm`, `WorkoutScreen` (mounted-ref guard on navigate) and `SessionList`.
+- [x] Add `src/components/ModalOverlay.tsx` (show class, initial focus, Tab trap, Escape, inert background, focus restore). Move CharacterCreatedOverlay onto it.
+- [x] Add `LevelUpOverlay.tsx`. Make the Hub name an `h1 tabIndex={-1}`.
+- [x] Add `XpPopup.tsx` and the status region in `WorkoutLayout`.
+- [x] Add reduced-motion rules to `src/app/port.css`.
+- [x] Add unit and e2e tests. Tick this checklist.
 
 ## Later slices
 - Slice 4 `feat/react-port-log-profile`: Quest Log, Profile plus a lose/gain/maintain weight goal, reset with confirm (a reset creates a new `createdAt`, so any leftover draft is discarded), delete `legacy/`.
