@@ -48,6 +48,33 @@ test.describe('stats screen', () => {
     await expect(page.getByText('Aragorn', { exact: true })).toBeVisible();
   });
 
+  test('keyboard focus cannot reach the grid behind an open detail panel', async ({ page }) => {
+    await page.addInitScript(
+      ({ key, save }) => {
+        window.localStorage.setItem(key, save);
+      },
+      { key: SAVE_KEY, save: JSON.stringify(legacySave()) },
+    );
+    await page.goto('/stats');
+    await page.getByRole('button', { name: 'Bench Press, level 2' }).click();
+    await expect(page.getByRole('dialog', { name: 'Bench Press' })).toBeVisible();
+
+    // The grid and "← Hub" link behind the panel are inert: the browser refuses to focus them.
+    const cellTookFocus = await page.evaluate(() => {
+      const cell = document.querySelector<HTMLButtonElement>('.stat-cell');
+      cell?.focus();
+      return document.activeElement === cell;
+    });
+    expect(cellTookFocus).toBe(false);
+
+    for (const key of ['Shift+Tab', 'Tab', 'Tab']) {
+      await page.keyboard.press(key);
+      const focusIsBehindPanel = await page.evaluate(() => !!document.activeElement?.closest('[inert]'));
+      expect(focusIsBehindPanel, `focus escaped the panel after ${key}`).toBe(false);
+    }
+    await expect(page.getByRole('dialog', { name: 'Bench Press' })).toBeVisible();
+  });
+
   test('visiting /stats with no save redirects to Start', async ({ page }) => {
     await page.goto('/stats');
     await expect(page).toHaveURL(/\/$/);

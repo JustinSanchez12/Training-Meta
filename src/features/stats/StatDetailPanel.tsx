@@ -9,7 +9,7 @@ interface StatDetailPanelProps {
 export function StatDetailPanel({ view, onClose }: StatDetailPanelProps) {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && !event.defaultPrevented && !event.isComposing) onClose();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
