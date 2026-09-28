@@ -109,9 +109,14 @@ test.describe('log workout', () => {
     await page.getByRole('button', { name: /back/i }).click();
     await expect(page.getByText('Total: +30 XP (2 exercises)')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Remove Swimming' }).click();
-    await expect(page.getByRole('button', { name: 'Remove Swimming' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Remove Swimming, 4 laps', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^Remove Swimming/ })).toHaveCount(0);
     await expect(page.getByText('Total: +10 XP (1 exercise)')).toBeVisible();
+    // Focus moves to the ✕ now in that position, then to the empty message.
+    const yoga = page.getByRole('button', { name: 'Remove Yoga, 1 session(s), — min', exact: true });
+    await expect(yoga).toBeFocused();
+    await yoga.click();
+    await expect(page.getByText(/no exercises added yet/i)).toBeFocused();
   });
 
   test('a workout the day after the last one extends the streak (local dates)', async ({ page }) => {

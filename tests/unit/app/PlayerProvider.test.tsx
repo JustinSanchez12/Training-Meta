@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
 import { usePlayer, type PlayerContextValue } from '@/app/playerContext';
@@ -62,7 +62,8 @@ describe('PlayerProvider logWorkout', () => {
     const captured: { current: PlayerContextValue | null } = { current: null };
     function Capture() {
       const value = usePlayer();
-      useEffect(() => {
+      // Layout effect: set during the commit, so it's ready as soon as the DOM shows the new state.
+      useLayoutEffect(() => {
         captured.current = value;
       });
       const { status, save } = value;
@@ -115,6 +116,80 @@ describe('PlayerProvider logWorkout', () => {
     });
     expect(screen.getByText('xp 30 streak 1')).toBeInTheDocument();
     expect(getCtx().save?.workoutLog).toHaveLength(1);
+  });
+
+  it('rejects a second call while the first is saving, and keeps the first result', async () => {
+    const repo = repositoryWith(async () => legacySave());
+    let finishSave: (() => void) | undefined;
+    vi.mocked(repo.save).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    const getCtx = renderWithContext(repo);
+    expect(await screen.findByText('xp 30 streak 1')).toBeInTheDocument();
+
+    const { logWorkout } = getCtx();
+    let first: Promise<WorkoutResult> | undefined;
+    act(() => {
+      first = logWorkout([bench]);
+    });
+    await expect(logWorkout([bench])).rejects.toThrow('A workout is already being saved');
+    await expect(getCtx().logWorkout([bench])).rejects.toThrow('A workout is already being saved');
+    expect(repo.save).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('xp 30 streak 1')).toBeInTheDocument();
+
+    await act(async () => {
+      finishSave?.();
+      await first;
+    });
+    const result = await first;
+    expect(result?.save.stats.benchPress.xp).toBe(60);
+    expect(screen.getByText('xp 60 streak 1')).toBeInTheDocument();
+    expect(getCtx().save?.workoutLog).toHaveLength(2);
+
+    // The guard is released once the first save settles.
+    await act(async () => {
+      await getCtx().logWorkout([bench]);
+    });
+    expect(screen.getByText('xp 90 streak 1')).toBeInTheDocument();
+    expect(repo.save).toHaveBeenCalledTimes(2);
+  });
+
+  it('releases the guard after a failed save', async () => {
+    const repo = repositoryWith(async () => legacySave());
+    vi.mocked(repo.save).mockRejectedValueOnce(new Error('quota exceeded'));
+    const getCtx = renderWithContext(repo);
+    expect(await screen.findByText('xp 30 streak 1')).toBeInTheDocument();
+
+    await act(async () => {
+      await expect(getCtx().logWorkout([bench])).rejects.toThrow('quota exceeded');
+    });
+    await act(async () => {
+      await getCtx().logWorkout([bench]);
+    });
+    expect(screen.getByText('xp 60 streak 1')).toBeInTheDocument();
+  });
+
+  it('builds on the latest save when called twice in sequence (no stale closure)', async () => {
+    const repo = repositoryWith(async () => legacySave());
+    const getCtx = renderWithContext(repo);
+    expect(await screen.findByText('xp 30 streak 1')).toBeInTheDocument();
+
+    // Hold on to the function from before either call, so a closure over the old `save` would show up.
+    const { logWorkout } = getCtx();
+    let second: WorkoutResult | undefined;
+    await act(async () => {
+      await logWorkout([bench]);
+      second = await logWorkout([bench]);
+    });
+
+    expect(second?.save.stats.benchPress.xp).toBe(90);
+    expect(second?.save.workoutLog).toHaveLength(3);
+    const saves = vi.mocked(repo.save).mock.calls.map(([data]) => data.stats.benchPress.xp);
+    expect(saves).toEqual([60, 90]);
+    expect(screen.getByText('xp 90 streak 1')).toBeInTheDocument();
   });
 
   it('rejects when there is no character', async () => {

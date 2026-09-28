@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { STAT_DEFINITIONS, STAT_ORDER } from '@/lib/game/stats';
 import { legacySave } from '../../fixtures/saves';
@@ -58,26 +58,30 @@ describe('WorkoutScreen', () => {
     expect(screen.getByText('Total: +33 XP (2 exercises)')).toBeInTheDocument();
   });
 
-  it('removes an entry with its ✕ button', async () => {
+  it('removes an entry with its ✕ button and moves focus sensibly', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave()));
-    await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+    await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10', '^weight': '135' });
     await logExercise(user, 'Swimming', { laps: '4' });
     expect(screen.getByText('Total: +50 XP (2 exercises)')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Remove Bench Press' }));
-    expect(screen.queryByRole('button', { name: 'Remove Bench Press' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove Swimming' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Remove Bench Press, 3×10 @ 135 lbs' }));
+    expect(screen.queryByRole('button', { name: /^Remove Bench Press/ })).not.toBeInTheDocument();
+    const swimming = screen.getByRole('button', { name: 'Remove Swimming, 4 laps' });
+    expect(swimming).toHaveFocus();
     expect(screen.getByText('Total: +20 XP (1 exercise)')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Remove Swimming' }));
-    expect(within(sessionSection()).getByText(/no exercises added yet/i)).toBeInTheDocument();
+    await user.click(swimming);
+    const empty = within(sessionSection()).getByText(/no exercises added yet/i);
+    expect(empty).toHaveFocus();
+    expect(screen.getByText('Total: +0 XP (0 exercises)')).toBeInTheDocument();
   });
 
   it('replaces an earlier weigh-in when Weight is logged twice', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave())); // currentWeight 178.5 lbs
     await logExercise(user, 'Weight', { 'current weight': '170' });
     await logExercise(user, 'Weight', { 'current weight': '178' });
-    expect(screen.getAllByRole('button', { name: 'Remove Weight' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Remove Weight/ })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Remove Weight, 178 lbs' })).toBeInTheDocument();
     expect(within(sessionSection()).getByText(/Weight — 178 lbs/)).toBeInTheDocument();
     expect(screen.getByText('Total: +10 XP (1 exercise)')).toBeInTheDocument();
   });
@@ -123,7 +127,7 @@ describe('WorkoutScreen', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save your workout. Try again.");
     expect(location()).toHaveTextContent(/^\/workout$/);
-    expect(screen.getByRole('button', { name: 'Remove Bench Press' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Bench Press, 3×10 @ — lbs' })).toBeInTheDocument();
     expect(screen.getByText('Total: +30 XP (1 exercise)')).toBeInTheDocument();
     await waitFor(() => expect(finishButton()).toBeEnabled());
 
@@ -132,6 +136,73 @@ describe('WorkoutScreen', () => {
     expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
     expect(repo.save).toHaveBeenCalledTimes(2);
     expect(repo.save.mock.calls[1]?.[0].stats.benchPress.xp).toBe(60);
+  });
+
+  describe('while Finish is saving', () => {
+    function pendingSave(repo: ReturnType<typeof createMemoryRepository>) {
+      let settle: { resolve(): void; reject(error: Error): void } | undefined;
+      repo.save.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve, reject) => {
+            settle = { resolve, reject };
+          }),
+      );
+      return () => {
+        if (!settle) throw new Error('save() was not called');
+        return settle;
+      };
+    }
+
+    const exerciseButtons = () =>
+      within(screen.getByRole('region', { name: /choose exercise/i })).getAllByRole('button');
+    const removeButtons = () => screen.getAllByRole('button', { name: /^Remove / });
+
+    it('disables the exercise, ✕ and Finish buttons, then goes to /hub on success', async () => {
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await logExercise(user, 'Yoga', { '^sessions': '1' });
+      await user.click(finishButton());
+
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+      expect(exerciseButtons()).toHaveLength(12);
+      for (const button of exerciseButtons()) expect(button).toBeDisabled();
+      expect(removeButtons()).toHaveLength(2);
+      for (const button of removeButtons()) expect(button).toBeDisabled();
+
+      // Clicks do nothing mid-save.
+      await user.click(screen.getByRole('button', { name: /^Remove Yoga/ }));
+      await user.click(exerciseButtons()[0]!);
+      expect(location()).toHaveTextContent(/^\/workout$/);
+      expect(screen.getByText('Total: +40 XP (2 exercises)')).toBeInTheDocument();
+
+      await act(async () => saving().resolve());
+      expect(await screen.findByRole('heading', { name: 'Hub stub' })).toBeInTheDocument();
+      expect(location()).toHaveTextContent('/hub');
+      expect(repo.save).toHaveBeenCalledTimes(1);
+      expect(repo.save.mock.calls[0]?.[0].workoutLog[0]?.exercises.map((e) => e.stat)).toEqual(['benchPress', 'yoga']);
+    });
+
+    it('re-enables the buttons and keeps the session after a failure', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const repo = createMemoryRepository(legacySave());
+      const saving = pendingSave(repo);
+      const user = renderWorkout(repo);
+      await logExercise(user, 'Bench Press', { '^sets': '3', '^reps': '10' });
+      await user.click(finishButton());
+      await waitFor(() => expect(finishButton()).toBeDisabled());
+      for (const button of removeButtons()) expect(button).toBeDisabled();
+
+      await act(async () => saving().reject(new Error('quota exceeded')));
+      expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save your workout. Try again.");
+      expect(finishButton()).toBeEnabled();
+      for (const button of exerciseButtons()) expect(button).toBeEnabled();
+      expect(removeButtons()).toHaveLength(1);
+      for (const button of removeButtons()) expect(button).toBeEnabled();
+      expect(screen.getByText('Total: +30 XP (1 exercise)')).toBeInTheDocument();
+      expect(location()).toHaveTextContent(/^\/workout$/);
+    });
   });
 
   it('goes to the Hub from "← Hub"', async () => {

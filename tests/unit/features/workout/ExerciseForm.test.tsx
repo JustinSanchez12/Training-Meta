@@ -43,15 +43,34 @@ describe('ExerciseForm', () => {
     expect(await screen.findByLabelText(/current weight \(kg\)/i)).toBeInTheDocument();
   });
 
-  it('shows inline errors for empty required fields and stays on the form', async () => {
+  it('describes each invalid field by its error (no alerts) and focuses the first invalid field', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
     await user.click(await screen.findByRole('button', { name: /log exercise/i }));
-    const alerts = screen.getAllByRole('alert');
-    expect(alerts.map((a) => a.textContent)).toEqual(['Please enter sets.', 'Please enter reps.']);
-    expect(screen.getByLabelText(/^sets/i)).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText(/^sets/i)).toHaveAccessibleDescription('Please enter sets.');
-    expect(screen.getByLabelText(/weight \(lbs\)/i)).not.toHaveAttribute('aria-invalid');
+    const sets = screen.getByLabelText(/^sets/i);
+    const reps = screen.getByLabelText(/^reps/i);
+    const weight = screen.getByLabelText(/weight \(lbs\)/i);
+    // Field errors are described, not announced all at once.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(sets).toHaveAttribute('aria-invalid', 'true');
+    expect(sets).toHaveAccessibleDescription('Please enter sets.');
+    expect(reps).toHaveAttribute('aria-invalid', 'true');
+    expect(reps).toHaveAccessibleDescription('Please enter reps.');
+    expect(weight).not.toHaveAttribute('aria-invalid');
+    expect(weight).not.toHaveAttribute('aria-describedby');
+    expect(sets).toHaveFocus();
     expect(location()).toHaveTextContent('/workout/benchPress');
+  });
+
+  it('focuses the first invalid field in form order, even when an earlier field is valid', async () => {
+    const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
+    await user.type(await screen.findByLabelText(/^sets/i), '3');
+    await user.type(screen.getByLabelText(/weight \(lbs\)/i), '-5');
+    // Move focus away so the assertion proves the form moved it.
+    await user.click(screen.getByRole('button', { name: /log exercise/i }));
+    expect(screen.getByLabelText(/^sets/i)).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByLabelText(/^reps/i)).toHaveFocus();
+    expect(screen.getByLabelText(/^reps/i)).toHaveAccessibleDescription('Please enter reps.');
+    expect(screen.getByLabelText(/weight \(lbs\)/i)).toHaveAccessibleDescription('Weight must be between 0 and 2000.');
   });
 
   it('rejects out-of-range and fractional values', async () => {
@@ -59,8 +78,9 @@ describe('ExerciseForm', () => {
     await user.type(await screen.findByLabelText(/^sets/i), '101');
     await user.type(screen.getByLabelText(/^reps/i), '1.5');
     await user.click(logButton());
-    expect(screen.getByText('Sets must be between 1 and 100.')).toBeInTheDocument();
-    expect(screen.getByText('Reps must be a whole number.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^sets/i)).toHaveAccessibleDescription('Sets must be between 1 and 100.');
+    expect(screen.getByLabelText(/^reps/i)).toHaveAccessibleDescription('Reps must be a whole number.');
+    expect(screen.getByLabelText(/^sets/i)).toHaveFocus();
     expect(location()).toHaveTextContent('/workout/benchPress');
   });
 
@@ -68,16 +88,22 @@ describe('ExerciseForm', () => {
     const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/mileRun');
     await user.type(await screen.findByLabelText(/distance/i), '0.05');
     await user.click(logButton());
-    expect(screen.getByRole('alert')).toHaveTextContent('Distance must be between 0.1 and 200.');
+    const distance = screen.getByLabelText(/distance/i);
+    expect(distance).toHaveAccessibleDescription('Distance must be between 0.1 and 200.');
+    expect(distance).toHaveAttribute('aria-invalid', 'true');
+    expect(distance).toHaveFocus();
   });
 
   it('clears a field error when that field changes', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
     await user.click(await screen.findByRole('button', { name: /log exercise/i }));
-    expect(screen.getAllByRole('alert')).toHaveLength(2);
+    expect(screen.getByText('Please enter sets.')).toBeInTheDocument();
+    expect(screen.getByText('Please enter reps.')).toBeInTheDocument();
     await user.type(screen.getByLabelText(/^sets/i), '3');
-    expect(screen.getAllByRole('alert')).toHaveLength(1);
-    expect(screen.getByRole('alert')).toHaveTextContent('Please enter reps.');
+    expect(screen.queryByText('Please enter sets.')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^sets/i)).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByLabelText(/^sets/i)).not.toHaveAttribute('aria-describedby');
+    expect(screen.getByLabelText(/^reps/i)).toHaveAccessibleDescription('Please enter reps.');
   });
 
   it('logs a valid entry (optional weight left blank) and returns to /workout', async () => {
