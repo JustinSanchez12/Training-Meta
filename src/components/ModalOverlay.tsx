@@ -70,7 +70,10 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
       // Deferred to the next frame: when onClose navigates, React Router commits the new screen in a transition
       // that can land after this cleanup (even after a microtask), so resolve the target once it has rendered.
       requestAnimationFrame(() => {
-        if (modalStack.length === 0) restoreFocus(returnTo);
+        const top = modalStack[modalStack.length - 1];
+        // Another modal is still open underneath: move focus into it rather than leaving it on <body>.
+        if (top) top.querySelector<HTMLElement>('.levelup-dismiss')?.focus();
+        else restoreFocus(returnTo);
       });
     };
   }, [host]);

@@ -239,6 +239,8 @@ describe('ModalOverlay', () => {
       // A is now the top: it's interactive, the page behind it still isn't.
       expect(hostOf(a)).not.toHaveAttribute('inert');
       expect(container).toHaveAttribute('inert');
+      // Focus moves into the modal that's now on top, not to <body>.
+      await waitFor(() => expect(within(a).getByRole('button', { name: 'Close A' })).toHaveFocus());
 
       // The next Escape closes A.
       await user.keyboard('{Escape}');
