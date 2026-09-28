@@ -31,3 +31,22 @@
   transform: none;
   box-shadow: none;
 }
+
+/* Stat cells are <button>s (legacy used divs): reset button defaults. */
+.stat-cell {
+  width: 100%;
+  color: inherit;
+  font-family: var(--font-ui);
+}
+
+.stat-xp-fill {
+  display: block;
+}
+
+.screen-header a.back-btn {
+  text-decoration: none;
+}
+
+a.hub-panel {
+  text-decoration: none;
+}

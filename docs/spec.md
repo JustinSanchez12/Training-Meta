@@ -1,60 +1,56 @@
-# Spec: React port, slice 1 (tooling, game core, character creation, Hub)
-Branch: feat/react-port-foundation
+# Spec: React port, slice 2 (Stats grid and stat detail panel)
+Branch: feat/react-port-stats
 
 ## Goal
-A player can open the new React app, create a character (name, gender, age, weight) and land on the Hub, with progress saved to localStorage across reloads. This slice also sets up Vite, TypeScript, Vitest and Playwright so later slices only port screens. The full port is more than a day of work, so this spec covers slice 1 only.
+From the Hub, a player can open the Stats screen and see all 12 stats with their level and progress. Tapping a stat opens a detail panel with its level, XP progress, total XP, category and XP rule. The screen is read-only and behaves like legacy `#screen-stats`.
 
 ## Scope
-- In: Vite + React 18 + strict TS + ESLint + Vitest (jsdom, RTL) + Playwright (chromium), with an `@/` alias to `src/`. Game rules ported to typed code (stat definitions, XP curve, levels, default stats, createPlayer). Zod save schema and a storage interface backed by localStorage. React Router with Start, Character Creation (4-step wizard) and Hub. `styles.css` moved over mostly as-is. `vercel.json` SPA rewrite.
-- Out: Stats grid, workout logging, Quest Log, Profile/reset (later slices). Supabase (no project yet). APE.
+- In: `/stats` route with a guard (no save sends you to `/`). The Hub "Stats" panel is enabled and links to it; the other three panels stay "Coming soon". The screen has a header ("← Hub", "⚔️ Stats", "Total Level: N"), a 3-column grid in `STAT_ORDER`, the detail panel, and pure display helpers with unit tests.
+- Out: Workout logging, XP gain, Quest Log, Profile (slices 3–4). No data, schema or storage changes.
 - Decisions:
-  - Keep localStorage behind an async `SaveRepository` (`load`/`save`/`clear`) so Supabase can replace it later. Use the same key as legacy (`ape-storage-the-training-meta`) and a legacy-compatible schema, so old saves still load.
-  - Drop the APE key gate (`js/auth.js` is already a no-op stub).
-  - Move legacy files to `legacy/` in this PR, because Vite needs the root `index.html`. `npm run legacy` serves it. The folder is deleted in slice 4.
-  - Copy CSS unchanged to `src/app/styles.css`. Screens use `className="screen active"` so the existing selectors still apply.
-  - Keep Google Analytics (G-Q98010P7LZ) for parity.
-  - Replace `alert()` validation with inline Zod error messages.
+  - Detail panel state is local (`selectedStat: StatKey | null`), not a URL param, as in legacy. It renders as `.stat-detail-panel.active` using the existing CSS.
+  - Cells are `<button type="button" className="stat-cell">` (legacy used divs) with the accessible name "<Name>, level N". Button resets go in `src/app/port.css`, so `styles.css` stays identical to legacy.
+  - The panel is `role="dialog"` with `aria-labelledby` set to its `h2`. "← Back" and Escape both close it. Focus moves to Back on open and returns to the cell on close.
+  - Fill width is `progress × 100%`, and 100% at MAX_LEVEL. At max level the detail shows "MAX LEVEL" instead of "x / y XP".
+  - XP is floored for display, because legacy saves can hold float XP. Levels still come from the raw XP.
+  - Category is capitalised for display ("Strength"). Legacy showed the raw lowercase key.
 
 ## Data
-- No tables, migrations or env vars.
-- `src/lib/game/schema.ts`: StatKey enum, StatProgress `{level 1..99, xp >= 0}`, Player, ExerciseEntry (loose `data` until slice 3), WorkoutEntry and SaveData `{ player, stats, workoutLog, dailyStreak, lastWorkoutDate }`.
-- `src/features/character/schema.ts`: CharacterForm. Name is trimmed, 1–20 chars. Gender is an enum. Age is an int 1–120. Weight is > 0. Unit is `lbs|kg`.
-- A corrupt or invalid save is treated as "no save".
+None. Reads `save.stats` from `usePlayer()`. New helper `src/features/stats/statView.ts`:
+`getStatView(key, stat) → { key, name, icon, level, fillPercent, isMax, xpText, totalXp, categoryLabel, xpRule }`.
 
 ## UI / flow
-1. `/`: with no valid save, the Start screen shows. With a valid save, redirect to `/hub`.
-2. START goes to `/create`, a 4-step wizard (name → gender → age → weight + unit), then a "Character Created" overlay, then `/hub`.
-3. `/hub` shows the name, Level 1, Total Level 12, 0 day streak, and four panels. The unported panels are disabled and marked "Coming soon".
-4. `/hub` with no save redirects to `/`.
+1. On `/hub`, the Stats panel is enabled ("View your skills") and goes to `/stats`.
+2. `/stats` shows the header with Total Level and 12 cells (icon, name, level, XP bar).
+3. Tapping a cell opens the detail panel: the icon and name, Level, a large XP bar and text, and the Total XP, Category and XP Rule rows.
+4. "← Back" or Escape closes the panel. "← Hub" returns to `/hub`.
+5. `/stats` with no save redirects to `/`.
 
 ## Acceptance criteria
-- [x] `typecheck`, `lint`, `test`, `build` and `test:e2e` all pass on a clean install with Node 24.
-- [x] `getXpForLevel`: 1 → 0, 2 → 20, 99 → 11573 (legacy formula `floor(L²·1.1 + 8L)`).
-- [x] `getLevelFromXp`: 0 and 19 → 1, 20 → 2, very large → 99.
-- [x] `getXpProgress` at max level returns progress 1 and xpForNext 0.
-- [x] Default stats give overall level 1 and total level 12.
-- [x] `SaveDataSchema` accepts a legacy save and rejects bad stat keys, negative XP and a missing player.
-- [x] `CharacterFormSchema` rejects an empty or whitespace name, a 21-char name, age 0, age 121, weight 0, and a missing gender.
-- [x] Storage returns null for missing or corrupt JSON and round-trips a valid save.
-- [x] The wizard doesn't advance past an invalid step and shows an error.
-- [x] E2E: create a character → Hub shows the name → reload keeps it. An empty name blocks step 1.
+- [x] `getStatView` for 0 XP: level 1, fillPercent 0, xpText "0 / 20 XP".
+- [x] benchPress at 30 XP: level 2, "10 / 13 XP", fillPercent ≈ 76.9.
+- [x] Float XP 3.0000000000000004: "3 / 20 XP", totalXp 3.
+- [x] 11573 XP or more: isMax, fillPercent 100, "MAX LEVEL".
+- [x] categoryLabel "Cardio" for mileRun, and xpRule from `STAT_DEFINITIONS`.
+- [x] StatsScreen renders 12 cell buttons in `STAT_ORDER` and the correct Total Level.
+- [x] Clicking a cell opens a dialog with that stat's details. Back and Escape each close it.
+- [x] The Hub Stats panel is enabled and links to `/stats`. The other three panels are still disabled.
+- [x] `/stats` with no save redirects to `/`.
+- [x] E2E: seeded save → Hub → Stats → Bench Press level 2 and Total Level 13 → open Bench Press → "10 / 13 XP", "Strength" and "sets × reps = XP" → Back → ← Hub.
 
 ## Tests
-- Unit: `tests/unit/lib/game/xp.test.ts`, `tests/unit/lib/game/schema.test.ts`, `tests/unit/lib/storage.test.ts`, `tests/unit/features/character/schema.test.ts`, `tests/unit/features/character/CharacterWizard.test.tsx`.
-- E2E: `tests/e2e/character-creation.spec.ts`.
+- Unit: `tests/unit/features/stats/statView.test.ts`, `tests/unit/features/stats/StatsScreen.test.tsx`, `tests/unit/features/hub/HubScreen.test.tsx`.
+- E2E: `tests/e2e/stats.spec.ts`. Seed `legacySave()` via `page.addInitScript`. Add a second test: `/stats` with no save redirects to Start.
 
 ## Tasks
-- [x] Move `index.html`, `css/` and `js/` to `legacy/`, and update the `legacy` script.
-- [x] Install deps and add configs (tsconfig, vite + vitest, eslint, playwright, vercel.json).
-- [x] Add `index.html`, `src/main.tsx`, `src/app/App.tsx` and `src/app/styles.css`.
-- [x] Port `src/lib/game/{stats,xp,player,schema}.ts` with unit tests.
-- [x] Add `src/lib/storage.ts` and `src/app/PlayerProvider.tsx` with unit tests.
-- [x] Add `src/features/start/StartScreen.tsx`.
-- [x] Add `src/features/character/` (wizard, schema, overlay) with tests.
-- [x] Add `src/features/hub/HubScreen.tsx` with the route guard.
-- [x] Add the e2e spec, and update the README and the CLAUDE.md migration note.
+- [x] Add `src/features/stats/statView.ts`.
+- [x] Add `src/features/stats/StatDetailPanel.tsx` (dialog, Back, Escape, focus).
+- [x] Add `src/features/stats/StatsScreen.tsx` (guard, header, grid, selected state).
+- [x] Register `/stats` in `src/app/App.tsx`.
+- [x] Enable the Stats panel in `src/features/hub/HubScreen.tsx`.
+- [x] Add button resets for `.stat-cell` in `src/app/port.css`.
+- [x] Add unit and e2e tests. Tick this checklist.
 
 ## Later slices (not in this PR)
-- Slice 2 `feat/react-port-stats`: Stats grid and stat detail panel.
 - Slice 3 `feat/react-port-workout`: workout logging, XP gain, level-up overlay, streak, and per-type exercise schemas. Fix the legacy bug where the Weight form sends `currentWeight` but XP reads `change`, so Weight never earns XP. Decide whether streak dates use local time or UTC.
 - Slice 4 `feat/react-port-log-profile`: Quest Log, Profile, reset with confirm. Delete `legacy/`.

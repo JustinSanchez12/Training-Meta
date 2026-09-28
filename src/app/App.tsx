@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CharacterWizard } from '@/features/character/CharacterWizard';
 import { HubScreen } from '@/features/hub/HubScreen';
 import { StartScreen } from '@/features/start/StartScreen';
+import { StatsScreen } from '@/features/stats/StatsScreen';
 import { usePlayer } from './playerContext';
 
 function AppRoutes() {
@@ -14,6 +15,7 @@ function AppRoutes() {
       <Route path="/" element={<StartScreen />} />
       <Route path="/create" element={<CharacterWizard />} />
       <Route path="/hub" element={<HubScreen />} />
+      <Route path="/stats" element={<StatsScreen />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
