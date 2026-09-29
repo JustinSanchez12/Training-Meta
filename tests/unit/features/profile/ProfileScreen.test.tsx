@@ -2,14 +2,8 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SESSION_KEY, saveSession } from '@/features/workout/sessionStorage';
 import { legacySave } from '../../fixtures/saves';
-import {
-  createMemoryRepository,
-  goTo,
-  location,
-  logExercise,
-  pendingSave,
-  renderWorkout,
-} from '../workout/renderWorkout';
+import { createMemoryRepository, pendingSave } from '../../helpers/memoryRepository';
+import { goTo, location, logExercise, renderWorkout } from '../workout/renderWorkout';
 
 const resetButton = () => screen.getByRole('button', { name: 'Reset Character' });
 const dialog = () => screen.getByRole('dialog', { name: 'Reset character?' });

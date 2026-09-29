@@ -1,39 +1,15 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { describe, expect, it } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
 import { RequireSave } from '@/app/RequireSave';
-import { usePlayer } from '@/app/playerContext';
 import { StatsScreen } from '@/features/stats/StatsScreen';
 import type { SaveData } from '@/lib/game/schema';
 import { STAT_DEFINITIONS, STAT_ORDER } from '@/lib/game/stats';
-import type { SaveRepository } from '@/lib/storage';
 import { legacySave } from '../../fixtures/saves';
-
-function createMemoryRepository(initial: SaveData | null = null) {
-  let stored = initial;
-  return {
-    load: vi.fn(async () => stored),
-    save: vi.fn(async (data: SaveData) => {
-      stored = data;
-    }),
-    clear: vi.fn(async () => {
-      stored = null;
-    }),
-  } satisfies SaveRepository;
-}
-
-/** Mirrors App: render nothing until the save has loaded. */
-function WaitForLoad({ children }: { children: ReactNode }) {
-  const { status } = usePlayer();
-  return status === 'loading' ? null : <>{children}</>;
-}
-
-function LocationProbe() {
-  return <div data-testid="location">{useLocation().pathname}</div>;
-}
+import { LocationProbe, WaitForLoad } from '../../helpers/TestHarness';
+import { createMemoryRepository } from '../../helpers/memoryRepository';
 
 function renderStats(save: SaveData | null) {
   const user = userEvent.setup();

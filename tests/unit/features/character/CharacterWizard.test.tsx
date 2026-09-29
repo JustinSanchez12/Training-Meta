@@ -1,38 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
-import { usePlayer } from '@/app/playerContext';
 import { CharacterWizard } from '@/features/character/CharacterWizard';
 import { HubScreen } from '@/features/hub/HubScreen';
-import type { SaveData } from '@/lib/game/schema';
 import type { SaveRepository } from '@/lib/storage';
 import { legacySave } from '../../fixtures/saves';
-
-function createMemoryRepository(initial: SaveData | null = null) {
-  let stored = initial;
-  return {
-    load: vi.fn(async () => stored),
-    save: vi.fn(async (data: SaveData) => {
-      stored = data;
-    }),
-    clear: vi.fn(async () => {
-      stored = null;
-    }),
-  } satisfies SaveRepository;
-}
-
-/** Mirrors App: render nothing until the save has loaded. */
-function WaitForLoad({ children }: { children: ReactNode }) {
-  const { status } = usePlayer();
-  return status === 'loading' ? null : <>{children}</>;
-}
-
-function LocationProbe() {
-  return <div data-testid="location">{useLocation().pathname}</div>;
-}
+import { LocationProbe, WaitForLoad } from '../../helpers/TestHarness';
+import { createMemoryRepository } from '../../helpers/memoryRepository';
 
 function renderWizard(repository: SaveRepository, hub: ReactNode = <h1>Hub stub</h1>) {
   const user = userEvent.setup();

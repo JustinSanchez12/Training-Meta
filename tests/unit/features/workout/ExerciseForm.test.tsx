@@ -2,7 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { SaveData } from '@/lib/game/schema';
 import { legacySave } from '../../fixtures/saves';
-import { createMemoryRepository, location, renderWorkout } from './renderWorkout';
+import { location, renderWorkout } from './renderWorkout';
+import { createMemoryRepository } from '../../helpers/memoryRepository';
 
 const logButton = () => screen.getByRole('button', { name: /log exercise/i });
 /** The form's own error summary; WorkoutLayout also has a status region (the XP announcement). */

@@ -1,7 +1,8 @@
 import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { legacySave } from '../../fixtures/saves';
-import { createMemoryRepository, goTo, logExercise, renderWorkout } from './renderWorkout';
+import { goTo, logExercise, renderWorkout } from './renderWorkout';
+import { createMemoryRepository } from '../../helpers/memoryRepository';
 
 const popup = () => document.querySelector('.xp-popup');
 

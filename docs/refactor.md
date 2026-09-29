@@ -1,33 +1,29 @@
-# Refactor: dedupe screen headers and guards, remove unused CSS
+# Refactor: dedupe test setup and fixtures
 
-**Rule: no behaviour change.** Estimated total: about 35–45 lines removed across 9 files (+1 component, +1 hook).
+**Rule: no behaviour change and no assertion changes.** Test names and counts stay the same.
 
-## Targets
-1. **Guards → one `RequireSave` layout route** (about 15 lines)
-   - The `const { save } = usePlayer(); if (!save) return <Navigate to="/" replace />` pattern appears 5×: Hub, Stats, Log, Profile and WorkoutLayout. ExerciseForm has `if (!save) return null`.
-   - Wrap `/hub`, `/stats`, `/log`, `/profile` and `/workout` in `RequireSave` in App.tsx, and add a `useSave()` hook that returns a non-null save.
-   - Start and the wizard are unchanged (their guards redirect the other way).
-   - The redirect is still in the same commit. After a reset, focus must still land on Start's h1 (e2e check).
-2. **Headers → `src/components/ScreenHeader.tsx`** (about 12 lines)
-   - The same `.screen-header` + "← Hub" link + `h2` block appears 4× (Stats, Workout, Log, Profile); Stats adds `header-meta`.
-   - The DOM stays byte-identical: `a.back-btn`, the h2 text and emoji, no wrapper element. It stays inside Stats' inert background.
-3. **Unused CSS** (about 10 lines)
-   - `.profile-stat-row span:first-child` (rows are now `dt`/`dd`).
-   - `@keyframes slideIn` (unused).
-   - The duplicate `grid-template-columns` in the 360px `.stats-grid` rule.
-   - Kept on purpose: `.screen`/`.active` pairs (focus fallback), and the dynamic `show`/`fade`/`selected` modifiers.
+## Targets (net lines, after counting helper code)
+1. **Shared unit-test harness pieces: about −60 net.**
+   - `createMemoryRepository`, `WaitForLoad` and `LocationProbe` are copied verbatim in the HubScreen, StatsScreen and CharacterWizard tests. They're identical to the ones in `features/workout/renderWorkout.tsx` / `TestHarness.tsx`.
+   - Move `TestHarness.tsx` and `memoryRepository.ts` (with `pendingSave`) into `tests/unit/helpers/`, and import them everywhere.
+   - About 8 import paths change.
+2. **(e2e, edits spec files but not assertions; needs the owner's OK) `seedSave` helper: about −15 net, borderline.**
+   - Three specs seed localStorage three different ways (every load / once per tab / once plus "yesterday"), and `SAVE_KEY` is declared 5 times.
+   - Medium risk: the once-vs-always flag decides what a reload does.
 
-## Risks
-- `useSave()` outside the guard throws, so it's only used under `RequireSave`.
-- Profile reset → Start focus timing: covered by `tests/e2e/log-profile.spec.ts`.
+## Dropped (net under 15, or would change what's tested)
+- A generic render helper (about −10), the pending-promise helpers (about −12).
+- `repositoryWith` stubs (deliberately different), console spies (one line each).
+- Storage fakes (single-use each), inline fixture variants (already use `fixtures/saves.ts`).
+- The e2e "create character" steps (the copies check different things), JSON readers (2 lines each).
 
-## Baseline (main @ 470ceb0)
-- typecheck + lint clean · unit 384 passed · e2e 21 passed
-- Lines: src/ 3753 (incl. CSS 1315) · tests/ 5040
+## Realistic total
+About −60 lines (unit only), or about −75 with target 2. That's about 1% of `tests/` (5,046 lines): most test lines are distinct cases, not copied setup.
 
-## After
-- typecheck + lint clean · unit 384 passed · e2e 21 passed · no e2e spec edited
-- Browser (390px): Stats and Profile headers/rows identical; /log with no save → Start
-- Lines: src/ 3755 (+2; CSS 1305, −10; TS +12) · tests/ 5046 (+6, harness wrappers)
-- Net: no line reduction. The new RequireSave, ScreenHeader and useSave (with doc comments) cost about what the
-  duplicates did. The win is one place for the guard and one for the header, not size.
+## Baseline (main @ 8e691bc)
+- typecheck + lint clean · unit 384 passed (24 files) · e2e 21 passed · tests/ 5046 lines
+
+## After (target 1 only, per the owner)
+- typecheck + lint clean · unit 384 passed (24 files) · e2e 21 passed · no e2e spec or src/ file changed
+- tests/ 4976 lines: **−70 net**
+- Diff audit: the only non-import changes are the moved helpers (no assertion touched)

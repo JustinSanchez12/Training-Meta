@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
-import { vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
 import { RequireSave } from '@/app/RequireSave';
 import { ExerciseForm } from '@/features/workout/ExerciseForm';
@@ -11,39 +10,8 @@ import { ProfileScreen } from '@/features/profile/ProfileScreen';
 import { WorkoutLayout } from '@/features/workout/WorkoutLayout';
 import { WorkoutScreen } from '@/features/workout/WorkoutScreen';
 import { WorkoutSessionProvider } from '@/features/workout/WorkoutSessionProvider';
-import type { SaveData } from '@/lib/game/schema';
 import type { SaveRepository } from '@/lib/storage';
-import { LocationProbe, WaitForLoad } from './TestHarness';
-
-export function createMemoryRepository(initial: SaveData | null = null) {
-  let stored = initial;
-  return {
-    load: vi.fn(async () => stored),
-    save: vi.fn(async (data: SaveData) => {
-      stored = data;
-    }),
-    clear: vi.fn(async () => {
-      stored = null;
-    }),
-  } satisfies SaveRepository;
-}
-
-export type MemoryRepository = ReturnType<typeof createMemoryRepository>;
-
-/** Makes the next repo.save() hang until the returned handle settles it. */
-export function pendingSave(repo: MemoryRepository) {
-  let settle: { resolve(): void; reject(error: Error): void } | undefined;
-  repo.save.mockImplementationOnce(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        settle = { resolve, reject };
-      }),
-  );
-  return () => {
-    if (!settle) throw new Error('save() was not called');
-    return settle;
-  };
-}
+import { LocationProbe, WaitForLoad } from '../../helpers/TestHarness';
 
 export const NOW = new Date(2026, 8, 28, 23, 30);
 
