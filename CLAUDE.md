@@ -15,10 +15,6 @@ See `README.md` for the game design and XP rules.
 | E2E tests | Playwright |
 | Node | 22.22+ or 24.15+ (see `.nvmrc`; Vitest 5 and jsdom require it) |
 
-> **Migration in progress:** the original vanilla-JS app is in `legacy/` (run it with `npm run legacy`).
-> Screens are being ported slice by slice. See "Later slices" in `docs/spec.md` or the latest spec PR.
-> Don't add features to `legacy/`. It gets deleted when the port is done.
-
 Optional AI layer: APE (`docs/ape-api.md`). Only call it from `api/`, never from the browser.
 
 ## Key commands

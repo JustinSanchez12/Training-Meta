@@ -33,7 +33,6 @@ The player will achieve complete satisfactory because the character they play is
 - Hosting: Vercel · Data: localStorage for now, Supabase planned
 - Google Fonts (MedievalSharp, Inter)
 
-> The original vanilla-JS app lives in `legacy/` until the port is finished. Run it with `npm run legacy`.
 
 ## Getting Started
 
