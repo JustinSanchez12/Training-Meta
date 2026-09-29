@@ -332,9 +332,13 @@ describe('ModalOverlay', () => {
       const onAction = vi.fn();
       render(<Confirm onAction={onAction} onClose={vi.fn()} disabled />);
       const reset = screen.getByRole('button', { name: 'Reset' });
-      expect(reset).toBeDisabled();
+      // aria-disabled, not disabled, so a focused action keeps focus while busy.
+      expect(reset).toHaveAttribute('aria-disabled', 'true');
+      expect(reset).toBeEnabled();
+      reset.focus();
       await user.click(reset);
       expect(onAction).not.toHaveBeenCalled();
+      expect(reset).toHaveFocus();
     });
 
     it('retries the focus restore until a screen heading renders after a redirect', async () => {

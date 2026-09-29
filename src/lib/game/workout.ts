@@ -108,7 +108,7 @@ export function buildExerciseEntry(stat: StatKey, input: ExerciseInput, context:
 const WEIGHT_RULES: Record<WeightGoal, string> = {
   lose: 'Lose 0.5+ lb (0.23 kg) since last weigh-in = 10 XP',
   gain: 'Gain 0.5+ lb (0.23 kg) since last weigh-in = 10 XP',
-  maintain: 'Stay within 0.5 lb (0.23 kg) of last weigh-in = 10 XP',
+  maintain: 'Stay within 0.5 lb (0.22 kg) of last weigh-in = 10 XP',
 };
 
 /** The XP rule shown to the player; Weight's depends on their goal. */

@@ -94,6 +94,21 @@ describe('ProfileScreen', () => {
     expect(location()).toHaveTextContent('/profile');
   });
 
+  // jsdom doesn't drop focus from a disabled element; the real guard for this is tests/e2e/log-profile.spec.ts.
+  it('keeps keyboard focus on the goal radio while the change saves', async () => {
+    const repo = createMemoryRepository(legacySave());
+    const user = renderWorkout(repo);
+    await screen.findByRole('navigation', { name: 'Test navigation' });
+    await goTo(user, 'Profile');
+    const lose = await screen.findByRole('radio', { name: 'Lose' });
+    lose.focus();
+    await user.keyboard('{ArrowRight}');
+    const gain = screen.getByRole('radio', { name: 'Gain' });
+    await waitFor(() => expect(gain).toBeChecked());
+    expect(gain).toHaveFocus();
+    expect(gain).toBeEnabled();
+  });
+
   it('disables the goal radios and Reset while a workout is being saved', async () => {
     const repo = createMemoryRepository(legacySave());
     const saving = pendingSave(repo);
@@ -106,11 +121,11 @@ describe('ProfileScreen', () => {
     expect(gain).toBeDisabled();
     await user.click(resetButton());
     const reset = within(dialog()).getByRole('button', { name: 'Reset' });
-    expect(reset).toBeDisabled();
+    expect(reset).toHaveAttribute('aria-disabled', 'true');
     expect(within(dialog()).getByText('A workout is being saved. Try again in a moment.')).toBeInTheDocument();
 
     await act(async () => saving().resolve());
-    await waitFor(() => expect(reset).toBeEnabled());
+    await waitFor(() => expect(reset).not.toHaveAttribute('aria-disabled'));
     expect(gain).toBeEnabled();
     expect(repo.clear).not.toHaveBeenCalled();
   });

@@ -49,8 +49,11 @@ test.describe('quest log and profile', () => {
     await page.getByRole('link', { name: /profile/i }).click();
     await expect(page).toHaveURL(/\/profile$/);
     await expect(page.getByRole('radio', { name: 'Lose' })).toBeChecked();
-    await page.getByRole('radio', { name: 'Gain' }).check();
+    // Keyboard change: the radio must keep focus while the goal saves (disabling it used to drop focus).
+    await page.getByRole('radio', { name: 'Lose' }).focus();
+    await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('radio', { name: 'Gain' })).toBeChecked();
+    await expect(page.getByRole('radio', { name: 'Gain' })).toBeFocused();
     await page.reload();
     await expect(page.getByRole('radio', { name: 'Gain' })).toBeChecked();
 

@@ -73,7 +73,7 @@ describe('getStatView', () => {
   it('shows the Weight rule for the player goal', () => {
     expect(getStatView('weight', { level: 1, xp: 0 }).xpRule).toMatch(/^Lose 0\.5\+ lb/);
     expect(getStatView('weight', { level: 1, xp: 0 }, 'maintain').xpRule).toBe(
-      'Stay within 0.5 lb (0.23 kg) of last weigh-in = 10 XP',
+      'Stay within 0.5 lb (0.22 kg) of last weigh-in = 10 XP',
     );
   });
 

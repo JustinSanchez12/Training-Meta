@@ -15,6 +15,7 @@ interface ModalOverlayProps {
   cancelLabel?: string;
   /** Styles the action as destructive. */
   danger?: boolean;
+  /** Rendered as aria-disabled (not disabled) so a focused action keeps focus while busy. */
   actionDisabled?: boolean;
 }
 
@@ -102,6 +103,8 @@ export function ModalOverlay({
           const top = modalStack[modalStack.length - 1];
           // Another modal is still open underneath: move focus into it rather than leaving it on <body>.
           if (top) top.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
+          // On retries, stop if the user has already put focus somewhere themselves.
+          else if (framesLeft < RESTORE_RETRY_FRAMES && document.activeElement !== document.body) return;
           else if (!restoreFocus(returnTo) && framesLeft > 0) attempt(framesLeft - 1);
         });
       };
@@ -158,8 +161,8 @@ export function ModalOverlay({
             <button
               type="button"
               className={danger ? 'btn-danger' : 'btn-primary'}
-              disabled={actionDisabled}
-              onClick={onAction ?? onClose}
+              aria-disabled={actionDisabled || undefined}
+              onClick={actionDisabled ? undefined : (onAction ?? onClose)}
             >
               {actionLabel}
             </button>
@@ -170,8 +173,8 @@ export function ModalOverlay({
             type="button"
             className={`${danger ? 'btn-danger' : 'btn-primary'} levelup-dismiss`}
             data-initial-focus
-            disabled={actionDisabled}
-            onClick={onAction ?? onClose}
+            aria-disabled={actionDisabled || undefined}
+            onClick={actionDisabled ? undefined : (onAction ?? onClose)}
           >
             {actionLabel}
           </button>

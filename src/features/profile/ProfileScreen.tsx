@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { usePlayer } from '@/app/playerContext';
 import { ModalOverlay } from '@/components/ModalOverlay';
@@ -16,6 +16,7 @@ export function ProfileScreen() {
   const navigate = useNavigate();
   const [goalError, setGoalError] = useState<string | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
+  const savingGoalRef = useRef(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -25,7 +26,9 @@ export function ProfileScreen() {
 
   async function changeGoal(value: string) {
     const parsed = WeightGoalSchema.safeParse(value);
-    if (!parsed.success) return;
+    // Ignore changes mid-save instead of disabling the radios: disabling the focused radio drops focus to <body>.
+    if (!parsed.success || savingGoalRef.current) return;
+    savingGoalRef.current = true;
     setSavingGoal(true);
     setGoalError(null);
     try {
@@ -34,6 +37,7 @@ export function ProfileScreen() {
       console.error('[Profile] Failed to save weight goal', error);
       setGoalError("Couldn't save your goal. Try again.");
     } finally {
+      savingGoalRef.current = false;
       setSavingGoal(false);
     }
   }
@@ -86,7 +90,7 @@ export function ProfileScreen() {
           <ProfileRow label="Workouts Logged" value={workoutLog.length} />
         </dl>
 
-        <fieldset className="goal-fieldset" disabled={savingGoal || finishing}>
+        <fieldset className="goal-fieldset" disabled={finishing} aria-busy={savingGoal}>
           <legend className="goal-legend">Weight Goal</legend>
           <div className="goal-options">
             {WeightGoalSchema.options.map((goal) => (

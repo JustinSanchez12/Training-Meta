@@ -216,3 +216,9 @@ h1.hub-player-name {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.btn-danger[aria-disabled='true'],
+.btn-primary[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -129,7 +129,7 @@ describe('getXpRule', () => {
   it('gives Weight a goal-specific rule, defaulting to lose', () => {
     expect(getXpRule('weight')).toBe('Lose 0.5+ lb (0.23 kg) since last weigh-in = 10 XP');
     expect(getXpRule('weight', 'gain')).toBe('Gain 0.5+ lb (0.23 kg) since last weigh-in = 10 XP');
-    expect(getXpRule('weight', 'maintain')).toBe('Stay within 0.5 lb (0.23 kg) of last weigh-in = 10 XP');
+    expect(getXpRule('weight', 'maintain')).toBe('Stay within 0.5 lb (0.22 kg) of last weigh-in = 10 XP');
   });
 
   it('uses the stat definition for every other stat, whatever the goal', () => {

@@ -25,7 +25,8 @@ export function PlayerProvider({ children, repository, now = defaultNow }: Playe
     saveRef.current = next;
     setSaveState(next);
   }, []);
-  const workoutInFlight = useRef(false);
+  // One write at a time: each action builds on saveRef, so overlapping writes would undo each other.
+  const writeInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,15 +61,15 @@ export function PlayerProvider({ children, repository, now = defaultNow }: Playe
       const current = saveRef.current;
       if (!current) throw new Error('Cannot log a workout without a character');
       // Two overlapping calls would both build on the same save and the second write would erase the first.
-      if (workoutInFlight.current) throw new Error('A workout is already being saved');
-      workoutInFlight.current = true;
+      if (writeInFlight.current) throw new Error('A workout is already being saved');
+      writeInFlight.current = true;
       try {
         const result = applyWorkout(current, exercises, now());
         await repo.save(result.save);
         setSave(result.save);
         return result;
       } finally {
-        workoutInFlight.current = false;
+        writeInFlight.current = false;
       }
     },
     [repo, now, setSave],
@@ -78,18 +79,28 @@ export function PlayerProvider({ children, repository, now = defaultNow }: Playe
     async (goal: WeightGoal) => {
       const current = saveRef.current;
       if (!current) throw new Error('Cannot set a weight goal without a character');
-      if (workoutInFlight.current) throw new Error('A workout is being saved; try again in a moment');
-      const next: SaveData = { ...current, player: { ...current.player, weightGoal: goal } };
-      await repo.save(next);
-      setSave(next);
+      if (writeInFlight.current) throw new Error('A workout is being saved; try again in a moment');
+      writeInFlight.current = true;
+      try {
+        const next: SaveData = { ...current, player: { ...current.player, weightGoal: goal } };
+        await repo.save(next);
+        setSave(next);
+      } finally {
+        writeInFlight.current = false;
+      }
     },
     [repo, setSave],
   );
 
   const resetCharacter = useCallback(async () => {
-    if (workoutInFlight.current) throw new Error('A workout is being saved; try again in a moment');
-    await repo.clear();
-    setSave(null);
+    if (writeInFlight.current) throw new Error('A workout is being saved; try again in a moment');
+    writeInFlight.current = true;
+    try {
+      await repo.clear();
+      setSave(null);
+    } finally {
+      writeInFlight.current = false;
+    }
   }, [repo, setSave]);
 
   const value = useMemo(
