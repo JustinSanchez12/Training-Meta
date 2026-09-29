@@ -24,3 +24,10 @@
 ## Baseline (main @ 470ceb0)
 - typecheck + lint clean · unit 384 passed · e2e 21 passed
 - Lines: src/ 3753 (incl. CSS 1315) · tests/ 5040
+
+## After
+- typecheck + lint clean · unit 384 passed · e2e 21 passed · no e2e spec edited
+- Browser (390px): Stats and Profile headers/rows identical; /log with no save → Start
+- Lines: src/ 3755 (+2; CSS 1305, −10; TS +12) · tests/ 5046 (+6, harness wrappers)
+- Net: no line reduction. The new RequireSave, ScreenHeader and useSave (with doc comments) cost about what the
+  duplicates did. The win is one place for the guard and one for the header, not size.
