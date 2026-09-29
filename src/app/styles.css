@@ -927,10 +927,6 @@ html, body {
   font-size: 14px;
 }
 
-.profile-stat-row span:first-child {
-  color: var(--text-secondary);
-}
-
 .profile-actions {
   margin-top: 16px;
 }
@@ -1053,15 +1049,9 @@ html, body {
   to { text-shadow: 0 0 30px rgba(240, 192, 64, 0.6), 0 0 60px rgba(240, 192, 64, 0.2); }
 }
 
-@keyframes slideIn {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
 /* === RESPONSIVE HELPERS === */
 @media (max-width: 360px) {
   .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
     gap: 6px;
   }
 
