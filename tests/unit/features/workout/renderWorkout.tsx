@@ -1,3 +1,4 @@
+import { RequireSave } from '@/app/RequireSave';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
@@ -73,11 +74,14 @@ export function renderWorkout(repository: SaveRepository, initialPath = '/workou
               />
               <Route path="/hub" element={options.hub ?? <h1>Hub stub</h1>} />
               <Route path="/stats" element={<h1>Stats stub</h1>} />
-              <Route path="/log" element={<QuestLogScreen />} />
-              <Route path="/profile" element={<ProfileScreen />} />
-              <Route path="/workout" element={<WorkoutLayout />}>
-                <Route index element={<WorkoutScreen />} />
-                <Route path=":stat" element={<ExerciseForm />} />
+              {/* Mirrors App: these screens rely on the RequireSave guard. */}
+              <Route element={<RequireSave />}>
+                <Route path="/log" element={<QuestLogScreen />} />
+                <Route path="/profile" element={<ProfileScreen />} />
+                <Route path="/workout" element={<WorkoutLayout />}>
+                  <Route index element={<WorkoutScreen />} />
+                  <Route path=":stat" element={<ExerciseForm />} />
+                </Route>
               </Route>
             </Routes>
             <LocationProbe />

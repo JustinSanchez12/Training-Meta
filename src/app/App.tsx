@@ -10,6 +10,7 @@ import { WorkoutLayout } from '@/features/workout/WorkoutLayout';
 import { WorkoutScreen } from '@/features/workout/WorkoutScreen';
 import { WorkoutSessionProvider } from '@/features/workout/WorkoutSessionProvider';
 import { usePlayer } from './playerContext';
+import { RequireSave } from './RequireSave';
 
 function AppRoutes() {
   const { status } = usePlayer();
@@ -22,13 +23,15 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<StartScreen />} />
         <Route path="/create" element={<CharacterWizard />} />
-        <Route path="/hub" element={<HubScreen />} />
-        <Route path="/stats" element={<StatsScreen />} />
-        <Route path="/log" element={<QuestLogScreen />} />
-        <Route path="/profile" element={<ProfileScreen />} />
-        <Route path="/workout" element={<WorkoutLayout />}>
-          <Route index element={<WorkoutScreen />} />
-          <Route path=":stat" element={<ExerciseForm />} />
+        <Route element={<RequireSave />}>
+          <Route path="/hub" element={<HubScreen />} />
+          <Route path="/stats" element={<StatsScreen />} />
+          <Route path="/log" element={<QuestLogScreen />} />
+          <Route path="/profile" element={<ProfileScreen />} />
+          <Route path="/workout" element={<WorkoutLayout />}>
+            <Route index element={<WorkoutScreen />} />
+            <Route path=":stat" element={<ExerciseForm />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

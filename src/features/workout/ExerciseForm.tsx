@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { usePlayer } from '@/app/playerContext';
+import { useSave } from '@/app/playerContext';
 import { EXERCISE_INPUT_SCHEMAS, type ExerciseInput } from '@/lib/game/exercise';
 import { StatKeySchema, type SaveData } from '@/lib/game/schema';
 import { STAT_DEFINITIONS, type StatKey } from '@/lib/game/stats';
@@ -11,10 +11,9 @@ import { useWorkoutSession, useXpFeedback } from './sessionContext';
 
 /** /workout/:stat: the URL param is validated with Zod; anything that isn't a stat goes back to /workout. */
 export function ExerciseForm() {
-  const { save } = usePlayer();
+  const save = useSave();
   const parsed = StatKeySchema.safeParse(useParams().stat);
   if (!parsed.success) return <Navigate to="/workout" replace />;
-  if (!save) return null; // WorkoutLayout redirects when there's no save.
   // Keyed so switching stats resets the form state.
   return <ExerciseFormFields key={parsed.data} stat={parsed.data} save={save} />;
 }

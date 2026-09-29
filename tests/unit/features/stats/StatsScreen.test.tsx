@@ -1,3 +1,4 @@
+import { RequireSave } from '@/app/RequireSave';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
@@ -43,7 +44,7 @@ function renderStats(save: SaveData | null) {
           <Routes>
             <Route path="/" element={<h1>Start stub</h1>} />
             <Route path="/hub" element={<h1>Hub stub</h1>} />
-            <Route path="/stats" element={<StatsScreen />} />
+            <Route element={<RequireSave />}><Route path="/stats" element={<StatsScreen />} /></Route>
           </Routes>
           <LocationProbe />
         </WaitForLoad>
