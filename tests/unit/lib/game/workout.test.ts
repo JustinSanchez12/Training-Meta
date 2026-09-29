@@ -7,10 +7,12 @@ import {
   buildExerciseEntry,
   calculateXpGain,
   formatExerciseData,
+  getXpRule,
   roundXp,
   toLocalIsoDate,
   updateStreak,
 } from '@/lib/game/workout';
+import { STAT_DEFINITIONS } from '@/lib/game/stats';
 import { legacySave } from '../../fixtures/saves';
 
 // Local-time constructor so these pass in any timezone.
@@ -83,6 +85,55 @@ describe('calculateXpGain', () => {
     it('a legacy {currentWeight}-only entry (no change) earns 0', () => {
       expect(calculateXpGain('weight', { currentWeight: 175 })).toBe(0);
     });
+  });
+
+  describe('weight goals (change = previous − current)', () => {
+    it.each([
+      // [goal, change in lb, xp]
+      ['lose', 0.5, 10],
+      ['lose', 0.49, 0],
+      ['lose', -0.5, 0],
+      ['gain', -0.5, 10],
+      ['gain', -0.49, 0],
+      ['gain', 0.5, 0],
+      ['maintain', 0.5, 10],
+      ['maintain', -0.5, 10],
+      ['maintain', 0, 10],
+      ['maintain', 0.51, 0],
+      ['maintain', -0.51, 0],
+    ] as const)('%s with change %d lb = %d XP', (goal, change, xp) => {
+      expect(calculateXpGain('weight', { change }, 'lbs', goal)).toBe(xp);
+    });
+
+    it.each([
+      // 0.23 kg = 0.507 lb, 0.22 kg = 0.485 lb
+      ['lose', 0.23, 10],
+      ['lose', 0.22, 0],
+      ['gain', -0.23, 10],
+      ['gain', -0.22, 0],
+      ['maintain', 0.22, 10],
+      ['maintain', -0.23, 0],
+    ] as const)('kg: %s with change %d kg = %d XP', (goal, change, xp) => {
+      expect(calculateXpGain('weight', { change }, 'kg', goal)).toBe(xp);
+    });
+
+    it('defaults to lose, and buildExerciseEntry passes the goal through', () => {
+      expect(calculateXpGain('weight', { change: -1 })).toBe(0);
+      expect(entry('weight', { currentWeight: 181 }, { ...lbs, weightGoal: 'gain' }).xpGained).toBe(10);
+      expect(entry('weight', { currentWeight: 180.2 }, { ...lbs, weightGoal: 'maintain' }).xpGained).toBe(10);
+    });
+  });
+});
+
+describe('getXpRule', () => {
+  it('gives Weight a goal-specific rule, defaulting to lose', () => {
+    expect(getXpRule('weight')).toBe('Lose 0.5+ lb (0.23 kg) since last weigh-in = 10 XP');
+    expect(getXpRule('weight', 'gain')).toBe('Gain 0.5+ lb (0.23 kg) since last weigh-in = 10 XP');
+    expect(getXpRule('weight', 'maintain')).toBe('Stay within 0.5 lb (0.22 kg) of last weigh-in = 10 XP');
+  });
+
+  it('uses the stat definition for every other stat, whatever the goal', () => {
+    expect(getXpRule('benchPress', 'gain')).toBe(STAT_DEFINITIONS.benchPress.xpDescription);
   });
 });
 

@@ -5,6 +5,8 @@ import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
 import { ExerciseForm } from '@/features/workout/ExerciseForm';
+import { QuestLogScreen } from '@/features/log/QuestLogScreen';
+import { ProfileScreen } from '@/features/profile/ProfileScreen';
 import { WorkoutLayout } from '@/features/workout/WorkoutLayout';
 import { WorkoutScreen } from '@/features/workout/WorkoutScreen';
 import { WorkoutSessionProvider } from '@/features/workout/WorkoutSessionProvider';
@@ -61,9 +63,18 @@ export function renderWorkout(repository: SaveRepository, initialPath = '/workou
         <WaitForLoad>
           <WorkoutSessionProvider {...providerProps}>
             <Routes>
-              <Route path="/" element={<h1>Start stub</h1>} />
+              <Route
+                path="/"
+                element={
+                  <div className="screen active">
+                    <h1>Start stub</h1>
+                  </div>
+                }
+              />
               <Route path="/hub" element={options.hub ?? <h1>Hub stub</h1>} />
               <Route path="/stats" element={<h1>Stats stub</h1>} />
+              <Route path="/log" element={<QuestLogScreen />} />
+              <Route path="/profile" element={<ProfileScreen />} />
               <Route path="/workout" element={<WorkoutLayout />}>
                 <Route index element={<WorkoutScreen />} />
                 <Route path=":stat" element={<ExerciseForm />} />
@@ -75,6 +86,7 @@ export function renderWorkout(repository: SaveRepository, initialPath = '/workou
               <Link to="/stats">Test: go to Stats</Link>
               <Link to="/workout">Test: go to Workout</Link>
               <Link to="/workout/benchPress">Test: go to Bench Press</Link>
+              <Link to="/profile">Test: go to Profile</Link>
             </nav>
           </WorkoutSessionProvider>
         </WaitForLoad>
@@ -89,7 +101,7 @@ export type User = ReturnType<typeof userEvent.setup>;
 export const location = () => screen.getByTestId('location');
 
 /** Navigates via the harness's test links (outside the routes). */
-export async function goTo(user: User, where: 'Stats' | 'Workout' | 'Bench Press') {
+export async function goTo(user: User, where: 'Stats' | 'Workout' | 'Bench Press' | 'Profile') {
   const nav = screen.getByRole('navigation', { name: 'Test navigation' });
   await user.click(within(nav).getByRole('link', { name: `Test: go to ${where}` }));
 }

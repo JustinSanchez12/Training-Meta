@@ -70,6 +70,13 @@ describe('getStatView', () => {
     expect(getStatView('weight', { level: 1, xp: 0 }).categoryLabel).toBe('Body');
   });
 
+  it('shows the Weight rule for the player goal', () => {
+    expect(getStatView('weight', { level: 1, xp: 0 }).xpRule).toMatch(/^Lose 0\.5\+ lb/);
+    expect(getStatView('weight', { level: 1, xp: 0 }, 'maintain').xpRule).toBe(
+      'Stay within 0.5 lb (0.22 kg) of last weigh-in = 10 XP',
+    );
+  });
+
   it.each(STAT_ORDER)('maps %s to its definition', (key) => {
     const view = getStatView(key, { level: 1, xp: 0 });
     const def = STAT_DEFINITIONS[key];

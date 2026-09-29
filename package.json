@@ -14,8 +14,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "legacy": "npx serve legacy"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "react": "^18.3.1",

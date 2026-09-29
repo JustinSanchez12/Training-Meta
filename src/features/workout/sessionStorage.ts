@@ -58,6 +58,16 @@ export function saveSession(storage: Storage | null, owner: string, items: reado
   }
 }
 
+/** Removes the stored draft (e.g. after a character reset); never throws. */
+export function clearSession(storage: Storage | null): void {
+  if (!storage) return;
+  try {
+    storage.removeItem(SESSION_KEY);
+  } catch (error) {
+    console.warn('[Workout] Could not clear the stored session', error);
+  }
+}
+
 /** Session-local id. randomUUID needs a secure context (fine on localhost/HTTPS); fall back otherwise. */
 export function newItemId(): string {
   return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'

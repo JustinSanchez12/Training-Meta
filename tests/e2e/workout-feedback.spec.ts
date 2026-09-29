@@ -76,7 +76,7 @@ test.describe('workout feedback', () => {
 
     // The saved session is gone: a fresh visit starts empty.
     expect(await page.evaluate((key) => window.sessionStorage.getItem(key), SESSION_KEY)).toBeNull();
-    await page.getByRole('link', { name: /log workout/i }).click();
+    await page.getByRole('link', { name: /log workout train/i }).click();
     await expect(page.getByText('Total: +0 XP (0 exercises)')).toBeVisible();
   });
 

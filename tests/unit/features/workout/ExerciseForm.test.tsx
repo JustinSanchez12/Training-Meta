@@ -184,6 +184,16 @@ describe('ExerciseForm', () => {
     expect(await screen.findByText('Total: +0 XP (1 exercise)')).toBeInTheDocument();
   });
 
+  it('shows the Gain rule and awards XP for a gain when the goal is gain', async () => {
+    const save = legacySave();
+    save.player = { ...save.player, weightGoal: 'gain' };
+    const user = renderWorkout(createMemoryRepository(save), '/workout/weight');
+    expect(await screen.findByText('Gain 0.5+ lb (0.23 kg) since last weigh-in = 10 XP')).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/current weight/i), '179.5');
+    await user.click(logButton());
+    expect(await screen.findByText('Total: +10 XP (1 exercise)')).toBeInTheDocument();
+  });
+
   it('Back returns to /workout without adding anything', async () => {
     const user = renderWorkout(createMemoryRepository(legacySave()), '/workout/benchPress');
     await user.type(await screen.findByLabelText(/^sets/i), '3');

@@ -2,9 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { createPlayer, getDefaultStats } from '@/lib/game/player';
 import { SaveDataSchema, StatProgressSchema } from '@/lib/game/schema';
 import { STAT_ORDER } from '@/lib/game/stats';
-import { legacySave } from '../../fixtures/saves';
+import { legacyRawSave, legacySave } from '../../fixtures/saves';
 
 describe('SaveDataSchema', () => {
+  it('defaults a legacy save without weightGoal to lose, and rejects an unknown goal', () => {
+    expect(SaveDataSchema.parse(legacyRawSave()).player.weightGoal).toBe('lose');
+    const gain = legacySave();
+    gain.player.weightGoal = 'gain';
+    expect(SaveDataSchema.parse(gain).player.weightGoal).toBe('gain');
+    const bad = { ...legacySave(), player: { ...legacySave().player, weightGoal: 'bulk' } };
+    expect(SaveDataSchema.safeParse(bad).success).toBe(false);
+  });
+
   it('accepts a legacy save with float XP and a workout entry', () => {
     const result = SaveDataSchema.safeParse(legacySave());
     expect(result.success).toBe(true);

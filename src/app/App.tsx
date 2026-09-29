@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { CharacterWizard } from '@/features/character/CharacterWizard';
 import { HubScreen } from '@/features/hub/HubScreen';
+import { QuestLogScreen } from '@/features/log/QuestLogScreen';
+import { ProfileScreen } from '@/features/profile/ProfileScreen';
 import { StartScreen } from '@/features/start/StartScreen';
 import { StatsScreen } from '@/features/stats/StatsScreen';
 import { ExerciseForm } from '@/features/workout/ExerciseForm';
@@ -22,6 +24,8 @@ function AppRoutes() {
         <Route path="/create" element={<CharacterWizard />} />
         <Route path="/hub" element={<HubScreen />} />
         <Route path="/stats" element={<StatsScreen />} />
+        <Route path="/log" element={<QuestLogScreen />} />
+        <Route path="/profile" element={<ProfileScreen />} />
         <Route path="/workout" element={<WorkoutLayout />}>
           <Route index element={<WorkoutScreen />} />
           <Route path=":stat" element={<ExerciseForm />} />

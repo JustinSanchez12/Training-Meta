@@ -22,6 +22,7 @@ export function createPlayer(input: NewPlayerInput, now: Date = new Date()): Sav
       startWeight: input.weight,
       currentWeight: input.weight,
       weightUnit: input.weightUnit,
+      weightGoal: 'lose',
       createdAt: now.toISOString(),
       isNewPlayer: false,
     },

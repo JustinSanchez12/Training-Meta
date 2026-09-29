@@ -86,17 +86,13 @@ describe('HubScreen', () => {
     expect(workout).not.toHaveTextContent('Coming soon');
   });
 
-  it('keeps Quest Log and Profile disabled with "Coming soon"', async () => {
+  it('enables Quest Log and Profile as links to /log and /profile', async () => {
     renderHub(legacySave());
-    await screen.findByRole('link', { name: /stats/i });
-    for (const title of ['Quest Log', 'Profile']) {
-      const panel = screen.getByRole('button', { name: new RegExp(title) });
-      expect(panel).toBeDisabled();
-      expect(panel).toHaveTextContent('Coming soon');
-    }
-    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
-    expect(screen.getAllByRole('button')).toHaveLength(2);
-    expect(screen.getAllByRole('link')).toHaveLength(2);
+    expect(await screen.findByRole('link', { name: /quest log/i })).toHaveAttribute('href', '/log');
+    expect(screen.getByRole('link', { name: /profile/i })).toHaveAttribute('href', '/profile');
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getAllByRole('link')).toHaveLength(4);
   });
 
   it('navigates to /workout when the Log Workout panel is clicked', async () => {

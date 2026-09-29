@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAVE_KEY, createLocalSaveRepository } from '@/lib/storage';
-import { legacySave } from '../fixtures/saves';
+import { legacyRawSave, legacySave } from '../fixtures/saves';
 
 /** Minimal in-memory Storage so the repository can be tested without relying on jsdom globals. */
 class MemoryStorage implements Storage {
@@ -69,10 +69,11 @@ describe('createLocalSaveRepository', () => {
     await expect(createLocalSaveRepository(storage).load()).resolves.toBeNull();
   });
 
-  it('loads a legacy save written as raw JSON', async () => {
-    storage.setItem(SAVE_KEY, JSON.stringify(legacySave()));
+  it('loads a legacy save written as raw JSON (no weightGoal → lose)', async () => {
+    storage.setItem(SAVE_KEY, JSON.stringify(legacyRawSave()));
     const loaded = await createLocalSaveRepository(storage).load();
     expect(loaded).toEqual(legacySave());
+    expect(loaded?.player.weightGoal).toBe('lose');
     expect(loaded?.stats.mileRun.xp).toBe(3.0000000000000004);
     expect(loaded?.workoutLog[0]?.exercises).toHaveLength(2);
   });

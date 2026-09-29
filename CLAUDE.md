@@ -9,15 +9,11 @@ See `README.md` for the game design and XP rules.
 |-------|--------|
 | UI | React 18 + TypeScript + Vite |
 | Validation | Zod (schemas are the source of truth for types: `z.infer<typeof X>`) |
-| Data + auth | Supabase (Postgres, Auth, Row Level Security) |
+| Data + auth | Supabase (Postgres, Auth, Row Level Security): **planned**; saves use localStorage until then (`src/lib/storage.ts`) |
 | Hosting | Vercel (static build + serverless functions in `api/`) |
 | Unit tests | Vitest + React Testing Library |
 | E2E tests | Playwright |
 | Node | 22.22+ or 24.15+ (see `.nvmrc`; Vitest 5 and jsdom require it) |
-
-> **Migration in progress:** the original vanilla-JS app is in `legacy/` (run it with `npm run legacy`).
-> Screens are being ported slice by slice. See "Later slices" in `docs/spec.md` or the latest spec PR.
-> Don't add features to `legacy/`. It gets deleted when the port is done.
 
 Optional AI layer: APE (`docs/ape-api.md`). Only call it from `api/`, never from the browser.
 

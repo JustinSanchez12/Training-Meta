@@ -1,4 +1,4 @@
-/* Additions for the React port. styles.css is kept identical to legacy/css/styles.css. */
+/* Additions for the React port. styles.css is the original app's stylesheet, kept unchanged. */
 
 #root {
   height: 100%;
@@ -125,4 +125,100 @@ h1.hub-player-name {
   color: var(--text-secondary);
   font-size: 13px;
   text-align: center;
+}
+
+/* Confirm dialogs: Cancel + action. */
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-ui);
+}
+
+.btn-secondary:hover {
+  border-color: var(--gold-dim);
+}
+
+.btn-danger:disabled,
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Quest Log / Profile: semantic lists and <dl> in place of legacy divs. */
+.quest-list,
+.log-exercises {
+  list-style: none;
+}
+
+.profile-stat-row dt {
+  color: var(--text-secondary);
+}
+
+.goal-fieldset {
+  border: 0;
+  margin: 0 0 24px;
+  padding: 0;
+  min-width: 0;
+}
+
+.goal-legend {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.goal-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.goal-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.goal-option.selected {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.goal-option:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.goal-fieldset:disabled .goal-option {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-danger[aria-disabled='true'],
+.btn-primary[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

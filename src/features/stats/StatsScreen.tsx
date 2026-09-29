@@ -30,7 +30,7 @@ export function StatsScreen() {
 
   if (!save) return <Navigate to="/" replace />;
 
-  const views = STAT_ORDER.map((key) => getStatView(key, save.stats[key]));
+  const views = STAT_ORDER.map((key) => getStatView(key, save.stats[key], save.player.weightGoal));
   const selectedView = views.find((view) => view.key === selected);
 
   return (
