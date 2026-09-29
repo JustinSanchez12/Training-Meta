@@ -30,30 +30,30 @@ Players can read their workout history, view their profile, pick a lose/gain/mai
 6. ModalOverlay gains optional `onAction`, `cancelLabel` and `danger`. The stack focuses `[data-initial-focus]`.
 
 ## Acceptance criteria
-- [ ] A legacy save without `weightGoal` loads as `'lose'`.
-- [ ] XP for each goal at the ±0.5 lb boundaries, including kg.
-- [ ] The Weight form and stat detail show the current goal's rule.
-- [ ] A goal change is saved and survives a reload.
-- [ ] Quest Log shows the newest entry first with its local date; legacy null or missing data shows "—".
-- [ ] Cancel or Escape keeps the save. Reset clears the save and the draft and lands on Start.
-- [ ] `resetCharacter()` rejects while a workout save is in flight.
-- [ ] `finish()` skips its synchronous draft write if the owner changed during the save.
-- [ ] `legacy/` is gone, and lint, typecheck and build pass.
+- [x] A legacy save without `weightGoal` loads as `'lose'`.
+- [x] XP for each goal at the ±0.5 lb boundaries, including kg.
+- [x] The Weight form and stat detail show the current goal's rule.
+- [x] A goal change is saved and survives a reload.
+- [x] Quest Log shows the newest entry first with its local date; legacy null or missing data shows "—".
+- [x] Cancel or Escape keeps the save. Reset clears the save and the draft and lands on Start.
+- [x] `resetCharacter()` rejects while a workout save is in flight.
+- [x] `finish()` skips its synchronous draft write if the owner changed during the save.
+- [x] `legacy/` is gone, and lint, typecheck and build pass.
 
 ## Tests
 - Unit: goal XP and `getXpRule`, the schema default, QuestLog, ProfileScreen, ModalOverlay cancel/action, PlayerProvider reset/goal, the provider owner guard and draft clear.
 - E2E: `tests/e2e/log-profile.spec.ts`: create → log → Quest Log → goal Gain → reset → Start → reload stays on Start.
 
 ## Tasks
-- [ ] Weight goal: schema, XP, `getXpRule`, ExerciseForm and statView.
-- [ ] `setWeightGoal` and `resetCharacter` in PlayerProvider.
-- [ ] `clearSession`, the null-owner clear and the `finish()` owner guard.
-- [ ] ModalOverlay cancel/action/danger.
-- [ ] `QuestLogScreen` and `/log`.
-- [ ] `ProfileScreen` and `/profile`.
-- [ ] Enable the Hub panels.
-- [ ] Delete `legacy/` plus its script, eslint ignore and doc references.
-- [ ] Unit and e2e tests. Tick this checklist.
+- [x] Weight goal: schema, XP, `getXpRule`, ExerciseForm and statView.
+- [x] `setWeightGoal` and `resetCharacter` in PlayerProvider.
+- [x] `clearSession`, the null-owner clear and the `finish()` owner guard.
+- [x] ModalOverlay cancel/action/danger.
+- [x] `QuestLogScreen` and `/log`.
+- [x] `ProfileScreen` and `/profile`.
+- [x] Enable the Hub panels.
+- [x] Delete `legacy/` plus its script, eslint ignore and doc references.
+- [x] Unit and e2e tests. Tick this checklist.
 
 ## Later slices
 - A wizard step for the weight goal, if wanted.
