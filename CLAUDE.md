@@ -61,6 +61,7 @@ docs/              spec.md (current feature), decisions, reference
 ## Workflow
 
 - New feature: `/new-feature <idea>` runs the `feature-workflow` skill (spec → branch → build → test → review → PR).
+- Cleanup: `/refactor [request]` runs the `refactor-workflow` skill (targets → baseline → refactor → verify → review → PR). No behaviour change; the existing tests are the safety net and stay unweakened. Branches: `refactor/<slug>`.
 - Specs live in `docs/spec.md`. Its task checklist replaces the old `tasks.md`, which is now in `docs/archive/`.
 - Agents: `planner` (writes specs), `code-reviewer` (read-only review), `qa-tester` (writes and runs tests).
 - Before deploying, use the `deploy-checklist` skill.
