@@ -1,11 +1,11 @@
 import type { ExerciseInput } from './exercise';
-import type { ExerciseEntry, SaveData, StatProgress, WeightUnit, WorkoutEntry } from './schema';
+import type { ExerciseEntry, SaveData, StatProgress, WeightGoal, WeightUnit, WorkoutEntry } from './schema';
 import { STAT_DEFINITIONS, type StatKey } from './stats';
 import { getLevelFromXp } from './xp';
 
 export const LB_PER_KG = 2.20462;
-/** Losing at least this much (in lb) since the last saved weight earns Weight XP. */
-export const WEIGHT_LOSS_THRESHOLD_LB = 0.5;
+/** Weight XP threshold (lb) vs. the last saved weight: lose/gain at least this much, or stay within it to maintain. */
+export const WEIGHT_THRESHOLD_LB = 0.5;
 
 const DISTANCE_XP_PER_MILE: Partial<Record<StatKey, number>> = { mileRun: 10, cycling: 5 };
 
@@ -35,7 +35,12 @@ function num(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
-export function calculateXpGain(stat: StatKey, data: ExerciseData, weightUnit: WeightUnit = 'lbs'): number {
+export function calculateXpGain(
+  stat: StatKey,
+  data: ExerciseData,
+  weightUnit: WeightUnit = 'lbs',
+  weightGoal: WeightGoal = 'lose',
+): number {
   let xp: number;
   switch (STAT_DEFINITIONS[stat].xpType) {
     case 'reps':
@@ -51,9 +56,17 @@ export function calculateXpGain(stat: StatKey, data: ExerciseData, weightUnit: W
       xp = (num(data.sessions) || 1) * 10;
       break;
     case 'weight': {
-      // `change` is the loss in the player's unit (positive = lost weight). Loss-only until a weight goal exists.
+      // `change` is previous − current in the player's unit (positive = lost weight).
       const lostLb = num(data.change) * (weightUnit === 'kg' ? LB_PER_KG : 1);
-      xp = lostLb >= WEIGHT_LOSS_THRESHOLD_LB ? 10 : 0;
+      // Round away float noise from the kg conversion before comparing with the threshold.
+      const lost = Math.round(lostLb * 1000) / 1000;
+      const onTarget =
+        weightGoal === 'lose'
+          ? lost >= WEIGHT_THRESHOLD_LB
+          : weightGoal === 'gain'
+            ? -lost >= WEIGHT_THRESHOLD_LB
+            : Math.abs(lost) <= WEIGHT_THRESHOLD_LB;
+      xp = onTarget ? 10 : 0;
       break;
     }
     case 'meal':
@@ -67,6 +80,7 @@ interface BuildContext {
   /** The player's last saved weight, which a Weight entry is compared against. */
   previousWeight: number;
   weightUnit: WeightUnit;
+  weightGoal?: WeightGoal;
   now?: Date;
 }
 
@@ -86,9 +100,21 @@ export function buildExerciseEntry(stat: StatKey, input: ExerciseInput, context:
     name: def.name,
     icon: def.icon,
     data,
-    xpGained: calculateXpGain(stat, data, context.weightUnit),
+    xpGained: calculateXpGain(stat, data, context.weightUnit, context.weightGoal),
     timestamp: (context.now ?? new Date()).toISOString(),
   };
+}
+
+const WEIGHT_RULES: Record<WeightGoal, string> = {
+  lose: 'Lose 0.5+ lb (0.23 kg) since last weigh-in = 10 XP',
+  gain: 'Gain 0.5+ lb (0.23 kg) since last weigh-in = 10 XP',
+  maintain: 'Stay within 0.5 lb (0.23 kg) of last weigh-in = 10 XP',
+};
+
+/** The XP rule shown to the player; Weight's depends on their goal. */
+export function getXpRule(stat: StatKey, weightGoal: WeightGoal = 'lose'): string {
+  const def = STAT_DEFINITIONS[stat];
+  return def.xpType === 'weight' ? WEIGHT_RULES[weightGoal] : def.xpDescription;
 }
 
 /** Adds an entry to the in-progress session. A new weigh-in replaces any earlier one: one Weight entry per session. */

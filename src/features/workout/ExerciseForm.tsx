@@ -5,7 +5,7 @@ import { usePlayer } from '@/app/playerContext';
 import { EXERCISE_INPUT_SCHEMAS, type ExerciseInput } from '@/lib/game/exercise';
 import { StatKeySchema, type SaveData } from '@/lib/game/schema';
 import { STAT_DEFINITIONS, type StatKey } from '@/lib/game/stats';
-import { buildExerciseEntry } from '@/lib/game/workout';
+import { buildExerciseEntry, getXpRule } from '@/lib/game/workout';
 import { getExerciseFields } from './fields';
 import { useWorkoutSession, useXpFeedback } from './sessionContext';
 
@@ -55,7 +55,11 @@ function ExerciseFormFields({ stat, save }: { stat: StatKey; save: SaveData }) {
 
     const input: ExerciseInput = result.data;
     const { item, totalXp } = addEntry(
-      buildExerciseEntry(stat, input, { previousWeight: save.player.currentWeight, weightUnit: unit }),
+      buildExerciseEntry(stat, input, {
+        previousWeight: save.player.currentWeight,
+        weightUnit: unit,
+        weightGoal: save.player.weightGoal,
+      }),
     );
     showXpGain(item, totalXp);
     navigate('/workout');
@@ -73,7 +77,7 @@ function ExerciseFormFields({ stat, save }: { stat: StatKey; save: SaveData }) {
           </h2>
         </div>
         <div className="exercise-form-info">
-          <span className="xp-rule">{def.xpDescription}</span>
+          <span className="xp-rule">{getXpRule(stat, save.player.weightGoal)}</span>
         </div>
 
         <form className="exercise-form-fields" onSubmit={handleSubmit} noValidate>

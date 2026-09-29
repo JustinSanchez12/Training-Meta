@@ -11,6 +11,7 @@ export const StatProgressSchema = z.object({
 
 export const GenderSchema = z.enum(['male', 'female', 'unspecified']);
 export const WeightUnitSchema = z.enum(['lbs', 'kg']);
+export const WeightGoalSchema = z.enum(['lose', 'gain', 'maintain']);
 
 // Save-side bounds match what the legacy app actually enforced, so no old save is rejected.
 // Stricter input limits live in the character form schema.
@@ -21,6 +22,8 @@ export const PlayerSchema = z.object({
   startWeight: z.number().positive(),
   currentWeight: z.number().positive(),
   weightUnit: WeightUnitSchema,
+  // Added in slice 4; older saves have none and default to the original loss-only rule.
+  weightGoal: WeightGoalSchema.default('lose'),
   createdAt: z.iso.datetime(),
   isNewPlayer: z.boolean(),
 });
@@ -56,6 +59,7 @@ export const SaveDataSchema = z.object({
 export type StatProgress = z.infer<typeof StatProgressSchema>;
 export type Gender = z.infer<typeof GenderSchema>;
 export type WeightUnit = z.infer<typeof WeightUnitSchema>;
+export type WeightGoal = z.infer<typeof WeightGoalSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
 export type ExerciseEntry = z.infer<typeof ExerciseEntrySchema>;
 export type WorkoutEntry = z.infer<typeof WorkoutEntrySchema>;
