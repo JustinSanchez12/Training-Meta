@@ -24,6 +24,7 @@ const modalStack: HTMLElement[] = [];
 const madeInert = new Set<Element>();
 /** A deferred focus restore from a modal that just closed; cancelled if another modal opens first. */
 let pendingRestore: number | null = null;
+const RESTORE_RETRY_FRAMES = 10;
 
 /** Makes everything except the top modal's host inert; with no modal open, restores what we changed. */
 function syncInert() {
@@ -94,13 +95,17 @@ export function ModalOverlay({
       // Deferred to the next frame: when onClose navigates, React Router commits the new screen in a transition
       // that can land after this cleanup (even after a microtask), so resolve the target once it has rendered.
       if (pendingRestore !== null) cancelAnimationFrame(pendingRestore);
-      pendingRestore = requestAnimationFrame(() => {
-        pendingRestore = null;
-        const top = modalStack[modalStack.length - 1];
-        // Another modal is still open underneath: move focus into it rather than leaving it on <body>.
-        if (top) top.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
-        else restoreFocus(returnTo);
-      });
+      // Retried for a few frames: a redirect can briefly render no screen at all (e.g. a guard's <Navigate>).
+      const attempt = (framesLeft: number) => {
+        pendingRestore = requestAnimationFrame(() => {
+          pendingRestore = null;
+          const top = modalStack[modalStack.length - 1];
+          // Another modal is still open underneath: move focus into it rather than leaving it on <body>.
+          if (top) top.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
+          else if (!restoreFocus(returnTo) && framesLeft > 0) attempt(framesLeft - 1);
+        });
+      };
+      attempt(RESTORE_RETRY_FRAMES);
     };
   }, [host]);
 
@@ -177,14 +182,15 @@ export function ModalOverlay({
   );
 }
 
-function restoreFocus(previous: HTMLElement | null) {
+/** Focuses the previous element or the current screen's heading; false if there's nothing to focus yet. */
+function restoreFocus(previous: HTMLElement | null): boolean {
   if (previous && previous.isConnected && previous !== document.body) {
     previous.focus();
-    return;
+    return true;
   }
   const heading = document.querySelector<HTMLElement>('.screen.active h1, .screen.active h2');
-  if (heading) {
-    if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
-    heading.focus();
-  }
+  if (!heading) return false;
+  if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+  heading.focus();
+  return true;
 }

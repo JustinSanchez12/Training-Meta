@@ -9,7 +9,7 @@ See `README.md` for the game design and XP rules.
 |-------|--------|
 | UI | React 18 + TypeScript + Vite |
 | Validation | Zod (schemas are the source of truth for types: `z.infer<typeof X>`) |
-| Data + auth | Supabase (Postgres, Auth, Row Level Security) |
+| Data + auth | Supabase (Postgres, Auth, Row Level Security): **planned**; saves use localStorage until then (`src/lib/storage.ts`) |
 | Hosting | Vercel (static build + serverless functions in `api/`) |
 | Unit tests | Vitest + React Testing Library |
 | E2E tests | Playwright |
