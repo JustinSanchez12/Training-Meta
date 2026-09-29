@@ -1,7 +1,7 @@
 import type { SaveData } from '@/lib/game/schema';
 import { getDefaultStats } from '@/lib/game/player';
 
-/** A save shaped like one written by the legacy vanilla-JS app, including float XP and a workout entry. */
+/** A save shaped like one written by the legacy vanilla-JS app (plus the default weightGoal), including float XP and a workout entry. */
 export function legacySave(): SaveData {
   const stats = getDefaultStats();
   stats.mileRun = { level: 1, xp: 3.0000000000000004 };
@@ -14,6 +14,7 @@ export function legacySave(): SaveData {
       startWeight: 180,
       currentWeight: 178.5,
       weightUnit: 'lbs',
+      weightGoal: 'lose',
       createdAt: '2025-01-01T12:00:00.000Z',
       isNewPlayer: false,
     },
@@ -47,4 +48,12 @@ export function legacySave(): SaveData {
     dailyStreak: 1,
     lastWorkoutDate: '2025-01-01',
   };
+}
+
+/** The same save exactly as the legacy app stored it: no `weightGoal` (added in slice 4). */
+export function legacyRawSave(): unknown {
+  const save = legacySave();
+  const player: Record<string, unknown> = { ...save.player };
+  delete player.weightGoal;
+  return { ...save, player };
 }

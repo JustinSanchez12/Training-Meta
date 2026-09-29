@@ -199,4 +199,87 @@ describe('PlayerProvider logWorkout', () => {
     await expect(getCtx().logWorkout([bench])).rejects.toThrow();
     expect(repo.save).not.toHaveBeenCalled();
   });
+
+  describe('setWeightGoal and resetCharacter', () => {
+    it('setWeightGoal saves the new goal, then updates state', async () => {
+      const repo = repositoryWith(async () => legacySave());
+      const getCtx = renderWithContext(repo);
+      await screen.findByText('xp 30 streak 1');
+      await act(async () => {
+        await getCtx().setWeightGoal('maintain');
+      });
+      expect(vi.mocked(repo.save).mock.calls[0]?.[0].player.weightGoal).toBe('maintain');
+      expect(getCtx().save?.player.weightGoal).toBe('maintain');
+    });
+
+    it('setWeightGoal leaves state unchanged when saving fails', async () => {
+      const repo = repositoryWith(async () => legacySave());
+      vi.mocked(repo.save).mockRejectedValueOnce(new Error('quota exceeded'));
+      const getCtx = renderWithContext(repo);
+      await screen.findByText('xp 30 streak 1');
+      await act(async () => {
+        await expect(getCtx().setWeightGoal('gain')).rejects.toThrow('quota exceeded');
+      });
+      expect(getCtx().save?.player.weightGoal).toBe('lose');
+    });
+
+    it('resetCharacter clears the repository, then the save', async () => {
+      const repo = repositoryWith(async () => legacySave());
+      const getCtx = renderWithContext(repo);
+      await screen.findByText('xp 30 streak 1');
+      await act(async () => {
+        await getCtx().resetCharacter();
+      });
+      expect(repo.clear).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('xp none streak none')).toBeInTheDocument();
+    });
+
+    it('resetCharacter keeps the save when clear() fails', async () => {
+      const repo = repositoryWith(async () => legacySave());
+      vi.mocked(repo.clear).mockRejectedValueOnce(new Error('denied'));
+      const getCtx = renderWithContext(repo);
+      await screen.findByText('xp 30 streak 1');
+      await act(async () => {
+        await expect(getCtx().resetCharacter()).rejects.toThrow('denied');
+      });
+      expect(screen.getByText('xp 30 streak 1')).toBeInTheDocument();
+    });
+
+    it('both reject while a workout save is in flight, then work once it settles', async () => {
+      const repo = repositoryWith(async () => legacySave());
+      let finishSave: (() => void) | undefined;
+      vi.mocked(repo.save).mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishSave = resolve;
+          }),
+      );
+      const getCtx = renderWithContext(repo);
+      await screen.findByText('xp 30 streak 1');
+
+      let first: Promise<WorkoutResult> | undefined;
+      act(() => {
+        first = getCtx().logWorkout([bench]);
+      });
+      await expect(getCtx().resetCharacter()).rejects.toThrow('A workout is being saved');
+      await expect(getCtx().setWeightGoal('gain')).rejects.toThrow('A workout is being saved');
+      expect(repo.clear).not.toHaveBeenCalled();
+      expect(repo.save).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        finishSave?.();
+        await first;
+      });
+      await act(async () => {
+        await getCtx().setWeightGoal('gain');
+      });
+      // Built on the post-workout save, not a stale one.
+      expect(getCtx().save).toMatchObject({ player: { weightGoal: 'gain' }, stats: { benchPress: { xp: 60 } } });
+      await act(async () => {
+        await getCtx().resetCharacter();
+      });
+      expect(repo.clear).toHaveBeenCalledTimes(1);
+      expect(getCtx().save).toBeNull();
+    });
+  });
 });

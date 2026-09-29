@@ -43,7 +43,7 @@ test.describe('log workout', () => {
 
     await page.goto('/hub');
     await expect(page.getByText('🔥 0 day streak')).toBeVisible();
-    await page.getByRole('link', { name: /log workout/i }).click();
+    await page.getByRole('link', { name: /log workout train/i }).click();
 
     await expect(page).toHaveURL(/\/workout$/);
     await expect(page.getByRole('heading', { name: /log workout/i })).toBeVisible();

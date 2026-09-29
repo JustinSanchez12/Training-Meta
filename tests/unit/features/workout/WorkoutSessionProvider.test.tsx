@@ -1,17 +1,17 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useLayoutEffect } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
-import { usePlayer, type PlayerContextValue } from '@/app/playerContext';
+import { PlayerContext, usePlayer, type PlayerContextValue } from '@/app/playerContext';
 import { HubScreen } from '@/features/hub/HubScreen';
 import type { SessionItem } from '@/features/workout/schema';
 import { useWorkoutSession, type WorkoutSession } from '@/features/workout/sessionContext';
 import { SESSION_KEY, saveSession } from '@/features/workout/sessionStorage';
 import { WorkoutSessionProvider } from '@/features/workout/WorkoutSessionProvider';
-import { SaveDataSchema, type ExerciseEntry } from '@/lib/game/schema';
-import type { WorkoutResult } from '@/lib/game/workout';
+import { SaveDataSchema, type ExerciseEntry, type SaveData } from '@/lib/game/schema';
+import { applyWorkout, type WorkoutResult } from '@/lib/game/workout';
 import { legacySave } from '../../fixtures/saves';
 import { createMemoryRepository, logExercise, pendingSave, renderWorkout, type MemoryRepository } from './renderWorkout';
 import { WaitForLoad } from './TestHarness';
@@ -196,19 +196,98 @@ describe('WorkoutSessionProvider', () => {
     it('re-hydrates when the character changes (none → created)', async () => {
       const createdAt = new Date('2026-09-28T10:00:00.000Z');
       vi.useFakeTimers({ toFake: ['Date'], now: createdAt });
-      // A draft already stored for the character about to be created.
-      saveSession(sessionStorage, createdAt.toISOString(), stored);
+      saveSession(sessionStorage, 'someone-else', stored);
 
       const { session, player } = renderProvider(createMemoryRepository(null));
       expect(await screen.findByText('0 items')).toBeInTheDocument();
-      // With no character, nothing is loaded and the draft is left alone.
-      expect(readStored()?.items).toEqual(stored);
+      // With no character, nothing is loaded and any stored draft is dropped.
+      expect(readStored()).toBeNull();
+      // A draft stored for the character about to be created.
+      saveSession(sessionStorage, createdAt.toISOString(), stored);
 
       await act(async () => {
         await player().createCharacter({ name: 'Link', gender: 'male', age: 17, weight: 60, weightUnit: 'kg' });
       });
       expect(await screen.findByText('2 items')).toBeInTheDocument();
       expect(session().items).toEqual(stored);
+    });
+  });
+
+  describe('character reset', () => {
+    it('drops the stored draft when the character is reset', async () => {
+      const { session, player } = renderProvider(createMemoryRepository(legacySave()));
+      await screen.findByText('0 items');
+      act(() => session().addEntry(bench));
+      expect(readStored()?.items).toHaveLength(1);
+      await act(async () => {
+        await player().resetCharacter();
+      });
+      expect(await screen.findByText('0 items')).toBeInTheDocument();
+      expect(readStored()).toBeNull();
+    });
+
+    it("finish() doesn't write the old character's draft when the owner changes mid-save", async () => {
+      let settle: ((result: WorkoutResult) => void) | undefined;
+      const logWorkout = vi.fn(
+        () =>
+          new Promise<WorkoutResult>((resolve) => {
+            settle = resolve;
+          }),
+      );
+      const other: SaveData = { ...legacySave(), player: { ...legacySave().player, createdAt: '2026-01-01T00:00:00.000Z' } };
+      const captured: { session: WorkoutSession | null; switchTo: ((save: SaveData | null) => void) | null } = {
+        session: null,
+        switchTo: null,
+      };
+      function FakePlayer({ children }: { children: ReactNode }) {
+        const [save, setSave] = useState<SaveData | null>(legacySave());
+        captured.switchTo = setSave;
+        const value: PlayerContextValue = {
+          status: 'ready',
+          save,
+          createCharacter: vi.fn(),
+          logWorkout,
+          setWeightGoal: vi.fn(),
+          resetCharacter: vi.fn(),
+        };
+        return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
+      }
+      function Probe() {
+        const session = useWorkoutSession();
+        useLayoutEffect(() => {
+          captured.session = session;
+        });
+        return <p>{session.items.length} items</p>;
+      }
+      render(
+        <FakePlayer>
+          <MemoryRouter>
+            <WorkoutSessionProvider storage={sessionStorage}>
+              <Probe />
+            </WorkoutSessionProvider>
+          </MemoryRouter>
+        </FakePlayer>,
+      );
+      act(() => {
+        captured.session?.addEntry(bench);
+        captured.session?.addEntry(swim);
+      });
+      let finished: Promise<WorkoutResult | null> | undefined;
+      act(() => {
+        finished = captured.session?.finish();
+      });
+      // Another character, with a draft of their own, takes over while the save is pending.
+      const theirs: SessionItem[] = [{ id: 'theirs-1', entry: swim }];
+      saveSession(sessionStorage, other.player.createdAt, theirs);
+      act(() => captured.switchTo?.(other));
+      expect(screen.getByText('1 items')).toBeInTheDocument();
+
+      await act(async () => {
+        settle?.(applyWorkout(legacySave(), [bench, swim]));
+        await finished;
+      });
+      // Still the new character's draft: finish() didn't write it back under the old owner.
+      expect(readStored()).toMatchObject({ owner: other.player.createdAt, items: theirs });
     });
   });
 

@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ModalOverlay } from '@/components/ModalOverlay';
 
@@ -285,6 +285,83 @@ describe('ModalOverlay', () => {
       } finally {
         already.remove();
       }
+    });
+  });
+
+  describe('confirm dialog (cancelLabel, onAction, danger)', () => {
+    function Confirm({ onAction, onClose, disabled = false }: { onAction(): void; onClose(): void; disabled?: boolean }) {
+      return (
+        <ModalOverlay
+          title="Reset?"
+          titleId="confirm-title"
+          actionLabel="Reset"
+          cancelLabel="Cancel"
+          danger
+          actionDisabled={disabled}
+          onAction={onAction}
+          onClose={onClose}
+        >
+          <p>Sure?</p>
+        </ModalOverlay>
+      );
+    }
+
+    it('focuses Cancel first; Cancel and Escape call onClose, the danger action calls onAction', async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      const onClose = vi.fn();
+      render(<Confirm onAction={onAction} onClose={onClose} />);
+      const cancel = screen.getByRole('button', { name: 'Cancel' });
+      const reset = screen.getByRole('button', { name: 'Reset' });
+      expect(cancel).toHaveFocus();
+      expect(cancel).toHaveClass('btn-secondary');
+      expect(reset).toHaveClass('btn-danger');
+
+      await user.click(cancel);
+      await user.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalledTimes(2);
+      expect(onAction).not.toHaveBeenCalled();
+
+      await user.click(reset);
+      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(2);
+    });
+
+    it('disables the action with actionDisabled', async () => {
+      const user = userEvent.setup();
+      const onAction = vi.fn();
+      render(<Confirm onAction={onAction} onClose={vi.fn()} disabled />);
+      const reset = screen.getByRole('button', { name: 'Reset' });
+      expect(reset).toBeDisabled();
+      await user.click(reset);
+      expect(onAction).not.toHaveBeenCalled();
+    });
+
+    it('retries the focus restore until a screen heading renders after a redirect', async () => {
+      function Redirect() {
+        const [phase, setPhase] = useState<'open' | 'redirecting' | 'start'>('open');
+        useEffect(() => {
+          if (phase !== 'redirecting') return;
+          // Like a guard's <Navigate>: a couple of frames with no screen at all.
+          let id = requestAnimationFrame(() => {
+            id = requestAnimationFrame(() => setPhase('start'));
+          });
+          return () => cancelAnimationFrame(id);
+        }, [phase]);
+        if (phase === 'start')
+          return (
+            <div className="screen active">
+              <h1>Start</h1>
+            </div>
+          );
+        if (phase === 'redirecting') return null;
+        return <Confirm onAction={() => setPhase('redirecting')} onClose={vi.fn()} />;
+      }
+      const user = userEvent.setup();
+      render(<Redirect />);
+      await user.click(screen.getByRole('button', { name: 'Reset' }));
+      const heading = await screen.findByRole('heading', { name: 'Start' });
+      await waitFor(() => expect(heading).toHaveFocus());
     });
   });
 });
