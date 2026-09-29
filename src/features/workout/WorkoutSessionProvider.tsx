@@ -5,7 +5,7 @@ import { addToSession, roundXp, type LevelUp } from '@/lib/game/workout';
 import { LevelUpOverlay } from './LevelUpOverlay';
 import type { SessionItem } from './schema';
 import { WorkoutSessionContext, type WorkoutSession } from './sessionContext';
-import { getSessionStorage, loadSession, newItemId, saveSession } from './sessionStorage';
+import { clearSession, getSessionStorage, loadSession, newItemId, saveSession } from './sessionStorage';
 
 const EMPTY_SESSION_ERROR = 'Add at least one exercise before finishing!';
 const SAVE_FAILED_ERROR = "Couldn't save your workout. Try again.";
@@ -42,8 +42,16 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
     itemsRef.current = items;
   }, [items]);
 
+  // Latest owner, for async work that must notice a character change (e.g. a reset) mid-save.
+  const ownerRef = useRef(owner);
+  useLayoutEffect(() => {
+    ownerRef.current = owner;
+  }, [owner]);
+
   useEffect(() => {
+    // No character (e.g. just reset): nothing to keep, so drop any stored draft.
     if (owner) saveSession(store, owner, items);
+    else clearSession(store);
   }, [store, owner, items]);
 
   const [finishing, setFinishing] = useState(false);
@@ -79,6 +87,7 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
       return null;
     }
 
+    const startedFor = ownerRef.current;
     finishingRef.current = true;
     setFinishing(true);
     setFinishError(null);
@@ -89,7 +98,8 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
       const remaining = itemsRef.current.filter((i) => !saved.has(i.id));
       setItems(remaining);
       // Persist now, not in the next effect: a reload in between would restore (and re-log) a saved workout.
-      if (owner) saveSession(store, owner, remaining);
+      // Skip if the character changed during the save: these items (and that draft) aren't theirs.
+      if (startedFor && ownerRef.current === startedFor) saveSession(store, startedFor, remaining);
       if (result.levelUps.length > 0) setLevelUps(result.levelUps);
       return result;
     } catch (error) {
@@ -100,7 +110,7 @@ export function WorkoutSessionProvider({ children, storage }: WorkoutSessionProv
       finishingRef.current = false;
       setFinishing(false);
     }
-  }, [logWorkout, setItems, owner, store]);
+  }, [logWorkout, setItems, store]);
 
   const closeLevelUps = useCallback(() => setLevelUps([]), []);
 

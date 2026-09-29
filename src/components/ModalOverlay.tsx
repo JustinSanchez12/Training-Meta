@@ -7,8 +7,15 @@ interface ModalOverlayProps {
   titleId: string;
   children: ReactNode;
   actionLabel: string;
-  /** Called by the action button and by Escape. */
+  /** Called by Escape and the Cancel button (and by the action button unless `onAction` is given). */
   onClose(): void;
+  /** Action button handler; defaults to `onClose`. */
+  onAction?(): void;
+  /** Adds a Cancel button (calls `onClose`) that gets initial focus, for confirm dialogs. */
+  cancelLabel?: string;
+  /** Styles the action as destructive. */
+  danger?: boolean;
+  actionDisabled?: boolean;
 }
 
 /** Open modals, bottom → top. Only the top one is interactive, handles Escape and owns the inert state. */
@@ -37,9 +44,20 @@ function syncInert() {
  * is inert, focus starts on the action button and Tab can't leave the dialog. On close, focus returns to where
  * it was, or to the current screen's first heading if that element is gone (e.g. after navigating).
  */
-export function ModalOverlay({ title, titleId, children, actionLabel, onClose }: ModalOverlayProps) {
+export function ModalOverlay({
+  title,
+  titleId,
+  children,
+  actionLabel,
+  onClose,
+  onAction,
+  cancelLabel,
+  danger = false,
+  actionDisabled = false,
+}: ModalOverlayProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const actionRef = useRef<HTMLButtonElement>(null);
+  // The safe choice gets initial focus: Cancel when there is one, otherwise the single action.
+  const initialFocusRef = useRef<HTMLButtonElement>(null);
   const [host] = useState(() => document.createElement('div'));
   // Captured once (StrictMode re-runs effects in development, when focus is already inside the dialog).
   const returnFocusTo = useRef<HTMLElement | null | undefined>(undefined);
@@ -63,7 +81,7 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
     modalStack.push(host);
     syncInert();
     // The portal only joins the document here, so autoFocus would be too early: focus explicitly.
-    actionRef.current?.focus();
+    initialFocusRef.current?.focus();
 
     return () => {
       const wasTop = modalStack[modalStack.length - 1] === host;
@@ -80,7 +98,7 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
         pendingRestore = null;
         const top = modalStack[modalStack.length - 1];
         // Another modal is still open underneath: move focus into it rather than leaving it on <body>.
-        if (top) top.querySelector<HTMLElement>('.levelup-dismiss')?.focus();
+        if (top) top.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
         else restoreFocus(returnTo);
       });
     };
@@ -127,9 +145,32 @@ export function ModalOverlay({ title, titleId, children, actionLabel, onClose }:
           {title}
         </div>
         {children}
-        <button ref={actionRef} type="button" className="btn-primary levelup-dismiss" onClick={onClose}>
-          {actionLabel}
-        </button>
+        {cancelLabel ? (
+          <div className="modal-actions">
+            <button ref={initialFocusRef} type="button" className="btn-secondary" data-initial-focus onClick={onClose}>
+              {cancelLabel}
+            </button>
+            <button
+              type="button"
+              className={danger ? 'btn-danger' : 'btn-primary'}
+              disabled={actionDisabled}
+              onClick={onAction ?? onClose}
+            >
+              {actionLabel}
+            </button>
+          </div>
+        ) : (
+          <button
+            ref={initialFocusRef}
+            type="button"
+            className={`${danger ? 'btn-danger' : 'btn-primary'} levelup-dismiss`}
+            data-initial-focus
+            disabled={actionDisabled}
+            onClick={onAction ?? onClose}
+          >
+            {actionLabel}
+          </button>
+        )}
       </div>
     </div>,
     host,

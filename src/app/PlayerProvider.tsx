@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPlayer, type NewPlayerInput } from '@/lib/game/player';
-import type { ExerciseEntry, SaveData } from '@/lib/game/schema';
+import type { ExerciseEntry, SaveData, WeightGoal } from '@/lib/game/schema';
 import { applyWorkout } from '@/lib/game/workout';
 import { createLocalSaveRepository, type SaveRepository } from '@/lib/storage';
 import { PlayerContext, type PlayerContextValue } from './playerContext';
@@ -74,9 +74,27 @@ export function PlayerProvider({ children, repository, now = defaultNow }: Playe
     [repo, now, setSave],
   );
 
+  const setWeightGoal = useCallback(
+    async (goal: WeightGoal) => {
+      const current = saveRef.current;
+      if (!current) throw new Error('Cannot set a weight goal without a character');
+      if (workoutInFlight.current) throw new Error('A workout is being saved; try again in a moment');
+      const next: SaveData = { ...current, player: { ...current.player, weightGoal: goal } };
+      await repo.save(next);
+      setSave(next);
+    },
+    [repo, setSave],
+  );
+
+  const resetCharacter = useCallback(async () => {
+    if (workoutInFlight.current) throw new Error('A workout is being saved; try again in a moment');
+    await repo.clear();
+    setSave(null);
+  }, [repo, setSave]);
+
   const value = useMemo(
-    () => ({ status, save, createCharacter, logWorkout }),
-    [status, save, createCharacter, logWorkout],
+    () => ({ status, save, createCharacter, logWorkout, setWeightGoal, resetCharacter }),
+    [status, save, createCharacter, logWorkout, setWeightGoal, resetCharacter],
   );
 
   return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
