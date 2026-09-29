@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useSave } from '@/app/playerContext';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { STAT_ORDER, type StatKey } from '@/lib/game/stats';
 import { getTotalLevel } from '@/lib/game/xp';
 import { StatDetailPanel } from './StatDetailPanel';
@@ -34,13 +34,7 @@ export function StatsScreen() {
   return (
     <div className="screen active">
       <div ref={backgroundRef}>
-        <div className="screen-header">
-          <Link to="/hub" className="back-btn">
-            ← Hub
-          </Link>
-          <h2>⚔️ Stats</h2>
-          <span className="header-meta">Total Level: {getTotalLevel(save.stats)}</span>
-        </div>
+        <ScreenHeader title="⚔️ Stats" meta={`Total Level: ${getTotalLevel(save.stats)}`} />
 
         <div className="stats-grid-container">
           <div className="stats-grid">

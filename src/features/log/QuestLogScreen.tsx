@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
 import { useSave } from '@/app/playerContext';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import type { WorkoutEntry } from '@/lib/game/schema';
 import { formatExerciseData, roundXp } from '@/lib/game/workout';
 
@@ -21,12 +21,7 @@ export function QuestLogScreen() {
 
   return (
     <div className="screen active">
-      <div className="screen-header">
-        <Link to="/hub" className="back-btn">
-          ← Hub
-        </Link>
-        <h2>📜 Quest Log</h2>
-      </div>
+      <ScreenHeader title="📜 Quest Log" />
 
       <div className="progress-log">
         {entries.length === 0 ? (

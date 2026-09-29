@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSave } from '@/app/playerContext';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { STAT_DEFINITIONS, STAT_ORDER, formatCategory, type StatCategory, type StatKey } from '@/lib/game/stats';
 import { roundXp } from '@/lib/game/workout';
 import { useWorkoutSession } from './sessionContext';
@@ -38,12 +39,7 @@ export function WorkoutScreen() {
 
   return (
     <div className="screen active">
-      <div className="screen-header">
-        <Link to="/hub" className="back-btn">
-          ← Hub
-        </Link>
-        <h2>🏋️ Log Workout</h2>
-      </div>
+      <ScreenHeader title="🏋️ Log Workout" />
 
       <div className="workout-content">
         <section className="workout-section" aria-labelledby="choose-exercise">

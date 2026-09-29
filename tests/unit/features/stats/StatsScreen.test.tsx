@@ -1,10 +1,10 @@
-import { RequireSave } from '@/app/RequireSave';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
+import { RequireSave } from '@/app/RequireSave';
 import { usePlayer } from '@/app/playerContext';
 import { StatsScreen } from '@/features/stats/StatsScreen';
 import type { SaveData } from '@/lib/game/schema';

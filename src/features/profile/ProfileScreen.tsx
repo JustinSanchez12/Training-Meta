@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { usePlayer, useSave } from '@/app/playerContext';
 import { ModalOverlay } from '@/components/ModalOverlay';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useWorkoutSession } from '@/features/workout/sessionContext';
 import { WeightGoalSchema, type Gender, type WeightGoal } from '@/lib/game/schema';
 import { getOverallLevel, getTotalLevel } from '@/lib/game/xp';
@@ -63,12 +64,7 @@ export function ProfileScreen() {
 
   return (
     <div className="screen active">
-      <div className="screen-header">
-        <Link to="/hub" className="back-btn">
-          ← Hub
-        </Link>
-        <h2>👤 Profile</h2>
-      </div>
+      <ScreenHeader title="👤 Profile" />
 
       <div className="profile-content">
         <div className="profile-card">
