@@ -13,8 +13,9 @@ import { WorkoutSessionProvider } from '@/features/workout/WorkoutSessionProvide
 import { SaveDataSchema, type ExerciseEntry, type SaveData } from '@/lib/game/schema';
 import { applyWorkout, type WorkoutResult } from '@/lib/game/workout';
 import { legacySave } from '../../fixtures/saves';
-import { createMemoryRepository, logExercise, pendingSave, renderWorkout, type MemoryRepository } from './renderWorkout';
-import { WaitForLoad } from './TestHarness';
+import { logExercise, renderWorkout } from './renderWorkout';
+import { createMemoryRepository, pendingSave, type MemoryRepository } from '../../helpers/memoryRepository';
+import { WaitForLoad } from '../../helpers/TestHarness';
 
 const OWNER = legacySave().player.createdAt;
 

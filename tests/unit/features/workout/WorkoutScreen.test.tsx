@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SESSION_KEY } from '@/features/workout/sessionStorage';
 import { STAT_DEFINITIONS, STAT_ORDER } from '@/lib/game/stats';
 import { legacySave } from '../../fixtures/saves';
-import { createMemoryRepository, goTo, location, logExercise, pendingSave, renderWorkout } from './renderWorkout';
+import { goTo, location, logExercise, renderWorkout } from './renderWorkout';
+import { createMemoryRepository, pendingSave } from '../../helpers/memoryRepository';
 
 const finishButton = () => screen.getByRole('button', { name: /finish workout/i });
 const sessionSection = () => screen.getByRole('region', { name: /current session/i });

@@ -2,7 +2,8 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { SaveData, WorkoutEntry } from '@/lib/game/schema';
 import { legacySave } from '../../fixtures/saves';
-import { createMemoryRepository, location, renderWorkout } from '../workout/renderWorkout';
+import { location, renderWorkout } from '../workout/renderWorkout';
+import { createMemoryRepository } from '../../helpers/memoryRepository';
 
 const localDate = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
