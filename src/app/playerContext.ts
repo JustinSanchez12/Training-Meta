@@ -18,6 +18,13 @@ export interface PlayerContextValue {
 
 export const PlayerContext = createContext<PlayerContextValue | null>(null);
 
+/** The current save, for screens under <RequireSave> (which guarantees one exists). */
+export function useSave(): SaveData {
+  const { save } = usePlayer();
+  if (!save) throw new Error('useSave must be used under <RequireSave>');
+  return save;
+}
+
 export function usePlayer(): PlayerContextValue {
   const value = useContext(PlayerContext);
   if (!value) throw new Error('usePlayer must be used inside <PlayerProvider>');

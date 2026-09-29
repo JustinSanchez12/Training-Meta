@@ -1,5 +1,5 @@
-import { Link, Navigate } from 'react-router-dom';
-import { usePlayer } from '@/app/playerContext';
+import { Link } from 'react-router-dom';
+import { useSave } from '@/app/playerContext';
 import { getOverallLevel, getTotalLevel } from '@/lib/game/xp';
 
 interface Panel {
@@ -18,8 +18,7 @@ const PANELS: Panel[] = [
 ];
 
 export function HubScreen() {
-  const { save } = usePlayer();
-  if (!save) return <Navigate to="/" replace />;
+  const save = useSave();
 
   const { player, stats, dailyStreak } = save;
 

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
+import { RequireSave } from '@/app/RequireSave';
 import { ExerciseForm } from '@/features/workout/ExerciseForm';
 import { QuestLogScreen } from '@/features/log/QuestLogScreen';
 import { ProfileScreen } from '@/features/profile/ProfileScreen';
@@ -73,11 +74,14 @@ export function renderWorkout(repository: SaveRepository, initialPath = '/workou
               />
               <Route path="/hub" element={options.hub ?? <h1>Hub stub</h1>} />
               <Route path="/stats" element={<h1>Stats stub</h1>} />
-              <Route path="/log" element={<QuestLogScreen />} />
-              <Route path="/profile" element={<ProfileScreen />} />
-              <Route path="/workout" element={<WorkoutLayout />}>
-                <Route index element={<WorkoutScreen />} />
-                <Route path=":stat" element={<ExerciseForm />} />
+              {/* Mirrors App: these screens rely on the RequireSave guard. */}
+              <Route element={<RequireSave />}>
+                <Route path="/log" element={<QuestLogScreen />} />
+                <Route path="/profile" element={<ProfileScreen />} />
+                <Route path="/workout" element={<WorkoutLayout />}>
+                  <Route index element={<WorkoutScreen />} />
+                  <Route path=":stat" element={<ExerciseForm />} />
+                </Route>
               </Route>
             </Routes>
             <LocationProbe />

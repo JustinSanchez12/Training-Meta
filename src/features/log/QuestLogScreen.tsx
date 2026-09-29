@@ -1,5 +1,5 @@
-import { Link, Navigate } from 'react-router-dom';
-import { usePlayer } from '@/app/playerContext';
+import { useSave } from '@/app/playerContext';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import type { WorkoutEntry } from '@/lib/game/schema';
 import { formatExerciseData, roundXp } from '@/lib/game/workout';
 
@@ -14,20 +14,14 @@ function newestFirst(log: readonly WorkoutEntry[]): WorkoutEntry[] {
 }
 
 export function QuestLogScreen() {
-  const { save } = usePlayer();
-  if (!save) return <Navigate to="/" replace />;
+  const save = useSave();
 
   const entries = newestFirst(save.workoutLog);
   const unit = save.player.weightUnit;
 
   return (
     <div className="screen active">
-      <div className="screen-header">
-        <Link to="/hub" className="back-btn">
-          ← Hub
-        </Link>
-        <h2>📜 Quest Log</h2>
-      </div>
+      <ScreenHeader title="📜 Quest Log" />
 
       <div className="progress-log">
         {entries.length === 0 ? (

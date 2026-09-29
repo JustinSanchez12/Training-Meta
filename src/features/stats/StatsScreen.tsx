@@ -1,13 +1,13 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { usePlayer } from '@/app/playerContext';
+import { useSave } from '@/app/playerContext';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { STAT_ORDER, type StatKey } from '@/lib/game/stats';
 import { getTotalLevel } from '@/lib/game/xp';
 import { StatDetailPanel } from './StatDetailPanel';
 import { getStatView } from './statView';
 
 export function StatsScreen() {
-  const { save } = usePlayer();
+  const save = useSave();
   const [selected, setSelected] = useState<StatKey | null>(null);
   const cellRefs = useRef(new Map<StatKey, HTMLButtonElement>());
   const backgroundRef = useRef<HTMLDivElement>(null);
@@ -28,21 +28,13 @@ export function StatsScreen() {
 
   const closeDetail = useCallback(() => setSelected(null), []);
 
-  if (!save) return <Navigate to="/" replace />;
-
   const views = STAT_ORDER.map((key) => getStatView(key, save.stats[key], save.player.weightGoal));
   const selectedView = views.find((view) => view.key === selected);
 
   return (
     <div className="screen active">
       <div ref={backgroundRef}>
-        <div className="screen-header">
-          <Link to="/hub" className="back-btn">
-            ← Hub
-          </Link>
-          <h2>⚔️ Stats</h2>
-          <span className="header-meta">Total Level: {getTotalLevel(save.stats)}</span>
-        </div>
+        <ScreenHeader title="⚔️ Stats" meta={`Total Level: ${getTotalLevel(save.stats)}`} />
 
         <div className="stats-grid-container">
           <div className="stats-grid">

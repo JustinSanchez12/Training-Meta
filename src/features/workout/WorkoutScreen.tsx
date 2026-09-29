@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { usePlayer } from '@/app/playerContext';
+import { useNavigate } from 'react-router-dom';
+import { useSave } from '@/app/playerContext';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { STAT_DEFINITIONS, STAT_ORDER, formatCategory, type StatCategory, type StatKey } from '@/lib/game/stats';
 import { roundXp } from '@/lib/game/workout';
 import { useWorkoutSession } from './sessionContext';
@@ -15,7 +16,7 @@ const CATEGORIES = STAT_ORDER.reduce((groups, key) => {
 }, new Map<StatCategory, StatKey[]>());
 
 export function WorkoutScreen() {
-  const { save } = usePlayer();
+  const save = useSave();
   const { items, removeItem, finishing, finishError, finish } = useWorkoutSession();
   const navigate = useNavigate();
 
@@ -38,12 +39,7 @@ export function WorkoutScreen() {
 
   return (
     <div className="screen active">
-      <div className="screen-header">
-        <Link to="/hub" className="back-btn">
-          ← Hub
-        </Link>
-        <h2>🏋️ Log Workout</h2>
-      </div>
+      <ScreenHeader title="🏋️ Log Workout" />
 
       <div className="workout-content">
         <section className="workout-section" aria-labelledby="choose-exercise">
@@ -72,7 +68,7 @@ export function WorkoutScreen() {
           <h3 id="current-session">Current Session</h3>
           <SessionList
             items={items}
-            weightUnit={save?.player.weightUnit ?? 'lbs'}
+            weightUnit={save.player.weightUnit}
             onRemove={removeItem}
             disabled={finishing}
           />

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { usePlayer } from '@/app/playerContext';
+import { useNavigate } from 'react-router-dom';
+import { usePlayer, useSave } from '@/app/playerContext';
 import { ModalOverlay } from '@/components/ModalOverlay';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useWorkoutSession } from '@/features/workout/sessionContext';
 import { WeightGoalSchema, type Gender, type WeightGoal } from '@/lib/game/schema';
 import { getOverallLevel, getTotalLevel } from '@/lib/game/xp';
@@ -11,7 +12,8 @@ const GENDER_LABELS: Record<Gender, string> = { male: 'Male', female: 'Female', 
 const GOAL_LABELS: Record<WeightGoal, string> = { lose: 'Lose', gain: 'Gain', maintain: 'Maintain' };
 
 export function ProfileScreen() {
-  const { save, setWeightGoal, resetCharacter } = usePlayer();
+  const save = useSave();
+  const { setWeightGoal, resetCharacter } = usePlayer();
   const { finishing } = useWorkoutSession();
   const navigate = useNavigate();
   const [goalError, setGoalError] = useState<string | null>(null);
@@ -21,7 +23,6 @@ export function ProfileScreen() {
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
-  if (!save) return <Navigate to="/" replace />;
   const { player, stats, dailyStreak, workoutLog } = save;
 
   async function changeGoal(value: string) {
@@ -63,12 +64,7 @@ export function ProfileScreen() {
 
   return (
     <div className="screen active">
-      <div className="screen-header">
-        <Link to="/hub" className="back-btn">
-          ← Hub
-        </Link>
-        <h2>👤 Profile</h2>
-      </div>
+      <ScreenHeader title="👤 Profile" />
 
       <div className="profile-content">
         <div className="profile-card">

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PlayerProvider } from '@/app/PlayerProvider';
+import { RequireSave } from '@/app/RequireSave';
 import { usePlayer } from '@/app/playerContext';
 import { HubScreen } from '@/features/hub/HubScreen';
 import type { SaveData } from '@/lib/game/schema';
@@ -41,7 +42,7 @@ function renderHub(save: SaveData | null) {
         <WaitForLoad>
           <Routes>
             <Route path="/" element={<h1>Start stub</h1>} />
-            <Route path="/hub" element={<HubScreen />} />
+            <Route element={<RequireSave />}><Route path="/hub" element={<HubScreen />} /></Route>
             <Route path="/stats" element={<h1>Stats stub</h1>} />
             <Route path="/workout" element={<h1>Workout stub</h1>} />
           </Routes>
